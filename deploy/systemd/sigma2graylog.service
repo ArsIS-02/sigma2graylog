@@ -1,0 +1,37 @@
+# Запуск без контейнера: venv + uvicorn.
+#
+#   sudo useradd -r -s /sbin/nologin s2g
+#   sudo mkdir -p /opt/sigma2graylog && sudo chown s2g:s2g /opt/sigma2graylog
+#   sudo -u s2g git clone https://github.com/ArsIS-02/sigma2graylog.git /opt/sigma2graylog
+#   sudo -u s2g python3.12 -m venv /opt/sigma2graylog/.venv
+#   sudo -u s2g /opt/sigma2graylog/.venv/bin/pip install -r /opt/sigma2graylog/requirements.txt
+#   sudo install -m 600 /dev/null /etc/sigma2graylog.env   # заполнить по .env.example
+#   sudo mkdir -p /var/lib/sigma2graylog && sudo chown s2g:s2g /var/lib/sigma2graylog
+#   sudo cp sigma2graylog.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now sigma2graylog
+
+[Unit]
+Description=sigma2graylog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=s2g
+Group=s2g
+WorkingDirectory=/opt/sigma2graylog
+EnvironmentFile=/etc/sigma2graylog.env
+Environment=DATA_DIR=/var/lib/sigma2graylog
+ExecStart=/opt/sigma2graylog/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8080 --proxy-headers
+Restart=always
+RestartSec=3
+
+# Минимальные ограничения ФС
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/sigma2graylog
+
+[Install]
+WantedBy=multi-user.target

@@ -541,7 +541,7 @@ class PasswordRequest(BaseModel):
 def login_page(request: Request):
     if DEMO_MODE or sessions.verify(_cookie(request) or "", users):
         return RedirectResponse("/", status_code=302)
-    return (STATIC / "login.html").read_text("utf-8")
+    return HTMLResponse((STATIC / "login.html").read_text("utf-8"), headers=NO_CACHE)
 
 
 @app.post("/login")
@@ -1002,11 +1002,15 @@ def change_password(req: PasswordRequest, response: Response,
     return {"ok": True, "message": "Пароль изменён"}
 
 
+NO_CACHE = {"Cache-Control": "no-store, must-revalidate"}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     if not DEMO_MODE and not sessions.verify(_cookie(request) or "", users):
         return RedirectResponse("/login", status_code=302)
-    return (STATIC / "index.html").read_text("utf-8")
+    # no-store: после обновления контейнера браузер не должен показывать старый интерфейс
+    return HTMLResponse((STATIC / "index.html").read_text("utf-8"), headers=NO_CACHE)
 
 
 @app.get("/healthz")

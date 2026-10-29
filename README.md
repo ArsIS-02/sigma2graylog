@@ -53,8 +53,8 @@
 ```bash
 git clone https://github.com/ArsIS-02/sigma2graylog.git
 cd sigma2graylog
-podman-compose -f docker-compose.demo.yml up --build
-# или: docker compose -f docker-compose.demo.yml up --build
+docker build -t sigma2graylog:latest .
+docker run -d --name sigma2graylog-demo -p 8080:8080 -e DEMO_MODE=1 sigma2graylog:latest
 ```
 
 Откройте http://localhost:8080 — приложение работает на синтетических данных, вход не требуется.
@@ -65,19 +65,34 @@ podman-compose -f docker-compose.demo.yml up --build
 ```bash
 cp .env.example .env
 # заполнить GRAYLOG_URL, GRAYLOG_USER, GRAYLOG_PASSWORD, APP_PASSWORD
-podman build -t sigma2graylog .
-podman run -d --name sigma2graylog --restart unless-stopped \
-  --security-opt label=disable \
-  -p 8080:8080 --env-file .env -v /srv/sigma2graylog:/data sigma2graylog
+docker build -t sigma2graylog:latest .
+docker run -d --name sigma2graylog --restart unless-stopped \
+  -p 8080:8080 --env-file .env -v s2g-data:/data sigma2graylog:latest
 ```
 
 Откройте http://localhost:8080, войдите под `APP_USER` / `APP_PASSWORD`, затем укажите параметры
 подключения во вкладке **«Настройки»** — интерфейс проверит их живым запросом к `/api/system`.
 
-> На системах с SELinux запускайте с `--security-opt label=disable`, а каталог данных монтируйте
-> без `:Z`. С `:Z` podman при каждом пересоздании контейнера выдаёт каталогу новые MCS-категории,
-> ранее записанные файлы становятся нечитаемыми, приложение не находит `users.json` и создаёт
-> пользователя заново — пароль молча сбрасывается.
+Для Podman замените `docker` на `podman` и добавьте `:Z` к тому: `-v s2g-data:/data:Z`
+(обязательно на системах с SELinux).
+
+## Развёртывание
+
+Подробная инструкция со всеми вариантами — **[DEPLOY.md](DEPLOY.md)**: команды, тома, автозапуск,
+реверс-прокси, Kubernetes и разбор типичных ошибок.
+
+| Вариант | Когда подходит |
+|---|---|
+| `docker run` / `podman run` | посмотреть, один сервер |
+| Docker Compose / podman-compose | несколько сервисов рядом |
+| Podman + systemd (quadlet) | продакшен на РЕД ОС, Fedora, RHEL |
+| Kubernetes / k3s | уже есть кластер |
+| venv + systemd | контейнеры запрещены |
+| офлайн (`docker save` / `load`) | нет доступа в интернет |
+
+Готовые файлы: [`docker-compose.yml`](docker-compose.yml),
+[`podman-compose.yaml`](podman-compose.yaml), [`deploy/`](deploy) — quadlet-юнит, systemd,
+конфиги nginx и Caddy, манифест Kubernetes.
 
 ## Переменные окружения
 

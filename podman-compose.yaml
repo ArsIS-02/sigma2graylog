@@ -1,16 +1,20 @@
+# Podman: podman-compose -f podman-compose.yaml up -d
 services:
   sigma2graylog:
-    image: localhost/sigma2graylog:0.31
+    image: ${S2G_IMAGE:-localhost/sigma2graylog:latest}
     container_name: sigma2graylog
     ports:
-      - "8080:8080"
+      - "${S2G_PORT:-8080}:8080"
     env_file:
       - .env
     volumes:
-      - /srv/sigma2graylog:/data
-    # SELinux выключен для контейнера намеренно: с :Z podman выдаёт каталогу
-    # новые MCS-категории при каждом пересоздании, старые файлы становятся
-    # нечитаемыми, и приложение при старте пересоздаёт users.json (пароль «слетал»).
-    security_opt:
-      - label=disable
+      - s2g-data:/data:Z
+    # Если данные лежат в хостовом каталоге и podman каждый раз выдаёт ему
+    # новые MCS-категории (файлы в /data становятся нечитаемыми, приложение
+    # пересоздаёт users.json и пароль «слетает») — используйте label=disable:
+    #   security_opt:
+    #     - label=disable
     restart: unless-stopped
+
+volumes:
+  s2g-data:

@@ -1,0 +1,123 @@
+# Kubernetes / k3s: kubectl apply -f deploy/k8s/sigma2graylog.yaml
+# Перед применением: заменить образ, домен и значения в Secret.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sigma2graylog
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sigma2graylog
+  namespace: sigma2graylog
+type: Opaque
+stringData:
+  GRAYLOG_URL: "http://graylog.graylog.svc:9000"
+  GRAYLOG_PUBLIC_URL: "https://graylog.example.com"
+  GRAYLOG_USER: "svc-sigma"
+  GRAYLOG_PASSWORD: "CHANGE_ME"
+  APP_USER: "sigma"
+  APP_PASSWORD: "CHANGE_ME"
+  FIELDS_TTL: "600"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sigma2graylog-data
+  namespace: sigma2graylog
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sigma2graylog
+  namespace: sigma2graylog
+  labels:
+    app: sigma2graylog
+spec:
+  replicas: 1          # приложение хранит состояние в /data — одна реплика
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sigma2graylog
+  template:
+    metadata:
+      labels:
+        app: sigma2graylog
+    spec:
+      # Образ работает от root внутри контейнера и пишет в /data.
+      # Для ужесточения создайте непривилегированного пользователя в своём
+      # образе и укажите здесь runAsUser вместе с fsGroup под том /data.
+      containers:
+        - name: app
+          image: ghcr.io/arsis-02/sigma2graylog:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: sigma2graylog
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sigma2graylog-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sigma2graylog
+  namespace: sigma2graylog
+spec:
+  selector:
+    app: sigma2graylog
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sigma2graylog
+  namespace: sigma2graylog
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: sigma.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sigma2graylog
+                port:
+                  number: 80

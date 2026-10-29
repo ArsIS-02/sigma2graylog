@@ -1,0 +1,37 @@
+# Quadlet для Podman 4.4+ (rootless): автозапуск без docker-compose.
+#
+# Установка:
+#   mkdir -p ~/.config/containers/systemd
+#   cp sigma2graylog.container ~/.config/containers/systemd/
+#   cp .env.example ~/sigma2graylog.env   # и заполнить
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now sigma2graylog
+#   loginctl enable-linger $USER          # чтобы работало без входа в систему
+#
+# Проверка: systemctl --user status sigma2graylog
+# Логи:     journalctl --user -u sigma2graylog -f
+
+[Unit]
+Description=sigma2graylog — конвертер Sigma-правил в детекты Graylog
+Documentation=file:///opt/sigma2graylog/README.md
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=localhost/sigma2graylog:latest
+ContainerName=sigma2graylog
+PublishPort=8080:8080
+EnvironmentFile=%h/sigma2graylog.env
+Volume=s2g-data:/data:Z
+# Подтягивать обновления образа: systemctl --user enable --now podman-auto-update.timer
+AutoUpdate=registry
+HealthCmd=python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/healthz')"
+HealthInterval=30s
+HealthRetries=3
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

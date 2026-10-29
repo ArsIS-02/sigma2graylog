@@ -26,6 +26,14 @@
   .brand img{display:block;border-radius:8px}
   .brand:hover h1{color:#fff}
   header h1{white-space:nowrap}
+  /* браузер подсвечивает автозаполненные поля белым — перекрашиваем под тему */
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,
+  textarea:-webkit-autofill{
+    -webkit-text-fill-color:var(--text);
+    -webkit-box-shadow:0 0 0 1000px var(--panel2) inset;
+    box-shadow:0 0 0 1000px var(--panel2) inset;
+    caret-color:var(--text);
+    transition:background-color 9999s ease-in-out 0s}
   .hdr-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
   header select{max-width:230px;text-overflow:ellipsis}
   header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px}
@@ -236,7 +244,7 @@
       <input type="file" id="dir-input" webkitdirectory directory multiple style="display:none">
       <button class="ghost" id="btn-files">Файлы…</button>
       <button class="ghost" id="btn-dir">Папка…</button>
-      <input type="text" id="url-input" placeholder="https://… YAML, zip или tar.gz с правилами"
+      <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="url-input" placeholder="https://… YAML, zip или tar.gz с правилами"
              style="flex:1;min-width:150px;font-size:13px">
       <button class="ghost" id="btn-url">По ссылке</button>
     </div>
@@ -434,7 +442,7 @@
   <div class="panel" style="margin-bottom:14px">
     <h2>Анализ стримов</h2>
     <div class="row">
-      <input type="text" id="st-search" placeholder="фильтр по названию" style="flex:1;min-width:200px">
+      <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="st-search" placeholder="фильтр по названию" style="flex:1;min-width:200px">
       <button class="ghost" id="st-reload">Пересканировать</button>
       <span class="spacer"></span>
       <span class="badge" id="st-info">—</span>
@@ -455,7 +463,7 @@
     <table class="cov-table"><thead><tr><th>поле Sigma</th><th>поле стрима</th><th>уверенность</th></tr></thead>
       <tbody id="sd-coverage"></tbody></table>
     <div class="row" style="margin-top:14px"><b style="font-size:13px">Поля стрима</b>
-      <input type="text" id="sd-filter" placeholder="поиск поля" style="margin-left:auto;min-width:180px"></div>
+      <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="sd-filter" placeholder="поиск поля" style="margin-left:auto;min-width:180px"></div>
     <div id="sd-fields" style="max-height:340px;overflow:auto"></div>
   </div>
 </section>
@@ -464,7 +472,7 @@
   <div class="panel">
     <h2>Детекты в Graylog</h2>
     <div class="row">
-      <input type="text" id="det-search" placeholder="поиск по названию или описанию" style="flex:1;min-width:200px">
+      <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="det-search" placeholder="поиск по названию или описанию" style="flex:1;min-width:200px">
       <select id="det-filter">
         <option value="all">все</option>
         <option value="never">без срабатываний</option>
@@ -484,11 +492,11 @@
     <h2>Подключение к Graylog</h2>
     <div class="form-grid">
       <label for="set-url">URL Graylog</label>
-      <div><input type="text" id="set-url" placeholder="http://graylog.example.com:9000">
+      <div><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="set-url" placeholder="http://graylog.example.com:9000">
         <div class="hintline">Адрес, по которому приложение ходит в API.</div></div>
 
       <label for="set-public">Публичный URL</label>
-      <div><input type="text" id="set-public" placeholder="не задан — будет использован URL выше">
+      <div><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="set-public" placeholder="не задан — будет использован URL выше">
         <div class="hintline">Подставляется в ссылки «открыть в Graylog». Должен резолвиться с рабочих машин.</div></div>
 
       <label for="set-mode">Авторизация</label>
@@ -543,7 +551,7 @@
   <h3 style="margin:0 0 6px">Создать Event Definition</h3>
   <div class="meta">Детект появится в Graylog и начнёт выполняться по расписанию.</div>
   <label>Название</label>
-  <input type="text" id="d-title">
+  <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="d-title">
   <label>Описание</label>
   <textarea id="d-desc"></textarea>
   <label>Приоритет (1 — высокий, 4 — низкий)</label>
@@ -561,12 +569,12 @@
   <h3 style="margin:0 0 6px">Экстрактор для поля</h3>
   <div class="meta" id="ex-meta"></div>
   <label>Имя нового поля</label>
-  <input type="text" id="ex-target">
+  <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="ex-target">
   <label>Собрать из полей (через запятую, порядок важен)</label>
-  <input type="text" id="ex-sources">
+  <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="ex-sources">
   <div class="hintline">Для auditd путь собирается как <code>cwd</code> + <code>name</code>: сначала каталог, потом имя файла.</div>
   <label>Разделитель</label>
-  <input type="text" id="ex-sep" value="/">
+  <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" id="ex-sep" value="/">
   <label>Правило pipeline для Graylog</label>
   <textarea id="ex-rule" style="font-family:var(--mono);font-size:12px;min-height:150px"></textarea>
   <div class="hintline">Вставьте в Graylog: System → Pipelines → нужный pipeline → New rule,
@@ -1340,6 +1348,7 @@ $('#btn-url').onclick = async () => {
   try {
     const payload = await api('/api/load/url', { method: 'POST', body: JSON.stringify({ url }) });
     applyLoaded(payload, 'ссылка');
+    $('#url-input').value = '';   // поле не должно тянуть прошлый адрес в следующие загрузки
   } catch (e) {
     $('#left-hint').textContent = 'ошибка: ' + e.message;
   } finally {
@@ -1373,7 +1382,11 @@ ta.addEventListener('drop', async (e) => {
     $('#left-hint').textContent = 'ошибка загрузки: ' + err.message;
   }
 });
-$('#btn-clear').onclick = () => { $('#sigma').value = ''; $('#result').innerHTML = '<div class="empty">Пока ничего не сконвертировано.</div>'; };
+$('#btn-clear').onclick = () => {
+  $('#sigma').value = '';
+  $('#url-input').value = '';        // чтобы «Очистить» убирал и адрес загрузки
+  $('#result').innerHTML = '<div class="empty">Пока ничего не сконвертировано.</div>';
+};
 $('#btn-refresh').onclick = async () => {
   $('#btn-refresh').disabled = true;
   try { const d = await api('/api/fields/refresh', { method: 'POST' }); $('#st-fields').innerHTML = 'полей: <b>' + d.fields + '</b>'; }
@@ -1836,13 +1849,23 @@ $('#set-save').onclick = async () => {
 loadMe(); loadStatus().then(() => {
   const h = location.hash.slice(1);
   const [view, arg] = h.split('/');
-  if (view && VIEWS.includes(view)) switchView(view, false);
+  const owner = VIEWS.find(v => h === v || h.startsWith(v + '-'));
+  if (owner) switchView(owner, false);
   if (view === 'streams' && arg) {
     setTimeout(() => { if (!streamsState.items.length) loadStreamsTable().then(() => openStream(arg)); else openStream(arg); }, 300);
   }
   if (state.demo) demoAutoFill();
 }); loadStreams(false); loadSourceList();
-window.addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'convert', false));
+function routeHash(raw) {
+  // '#guide-3' — якорь внутри руководства: вкладку не меняем, только прокручиваем
+  const owner = VIEWS.find(v => raw === v || raw.startsWith(v + '-'));
+  switchView(owner || raw.split('/')[0] || 'convert', false);
+  if (owner && raw !== owner) {
+    const el = document.getElementById(raw);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+window.addEventListener('hashchange', () => routeHash(location.hash.slice(1)));
 
 async function demoAutoFill() {
   try {

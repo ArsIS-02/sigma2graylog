@@ -1,0 +1,26 @@
+# Обычный запуск: подключается к реальному Graylog.
+# Перед стартом: cp .env.example .env и заполнить значения.
+services:
+  sigma2graylog:
+    build: .
+    image: sigma2graylog:latest
+    container_name: sigma2graylog
+    ports:
+      - "${S2G_PORT:-8080}:8080"
+    env_file:
+      - .env
+    volumes:
+      # Именованный том: данные переживают пересоздание контейнера.
+      # Для bind-mount на хостовый каталог на SELinux-системах добавьте :Z,
+      # например - /srv/sigma2graylog:/data:Z
+      - s2g-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  s2g-data:
