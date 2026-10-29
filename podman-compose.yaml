@@ -1,0 +1,16 @@
+services:
+  sigma2graylog:
+    image: localhost/sigma2graylog:0.31
+    container_name: sigma2graylog
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - /srv/sigma2graylog:/data
+    # SELinux выключен для контейнера намеренно: с :Z podman выдаёт каталогу
+    # новые MCS-категории при каждом пересоздании, старые файлы становятся
+    # нечитаемыми, и приложение при старте пересоздаёт users.json (пароль «слетал»).
+    security_opt:
+      - label=disable
+    restart: unless-stopped

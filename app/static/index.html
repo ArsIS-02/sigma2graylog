@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/icon-16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <meta name="theme-color" content="#0f1420">
+
+<title>sigma2graylog — Sigma → детекты Graylog</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2438; --line:#2a3550;
+    --text:#dbe3f4; --muted:#8b97b3; --accent:#4f8cff; --ok:#37d67a;
+    --warn:#ffb547; --err:#ff5f6d; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;row-gap:8px;position:relative;z-index:40}
+  header h1{white-space:nowrap}
+  .hdr-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+  header select{max-width:230px;text-overflow:ellipsis}
+  header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px}
+  header h1 span{color:var(--accent)}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+  .badge b{color:var(--text);font-weight:600}
+  .badge.ok b{color:var(--ok)} .badge.err b{color:var(--err)}
+  .spacer{flex:1}
+  select,input[type=text],input[type=number],textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;outline:none}
+  select:focus,textarea:focus,input:focus{border-color:var(--accent)}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:500}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  main{display:grid;grid-template-columns:minmax(340px,42%) 1fr;gap:16px;padding:16px 20px;align-items:start}
+  @media(max-width:1000px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+  textarea{width:100%;min-height:420px;resize:vertical;font-family:var(--mono);font-size:13px;line-height:1.45}
+  textarea.drag{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.18)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .rule{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--panel2)}
+  .rule h3{margin:0 0 4px;font-size:15px}
+  .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .lvl{text-transform:uppercase;font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;background:#2a3550}
+  .lvl.critical,.lvl.high{background:#4a1d24;color:#ff8f98}
+  .lvl.medium{background:#4a3a15;color:#ffc46b}
+  .lvl.low{background:#1d3a2a;color:#7fe0a4}
+  .query{position:relative;margin:10px 0;background:#0b1018;border:1px solid var(--line);border-radius:8px;padding:30px 12px 10px;font-family:var(--mono);font-size:13px;word-break:break-all;white-space:pre-wrap}
+  .query .copy{position:absolute;top:4px;right:6px;padding:3px 9px;font-size:11px;background:var(--panel);border:1px solid var(--line);color:var(--muted);user-select:none;-webkit-user-select:none}
+  .query .copy.ok{color:var(--ok);border-color:var(--ok)}
+  .query .copy.fail{color:var(--err);border-color:var(--err)}
+  .warn{font-size:13px;border-left:3px solid var(--warn);padding:4px 0 4px 10px;margin:6px 0;color:#ffd9a0}
+  .warn.error{border-color:var(--err);color:#ffb3b8}
+  .warn.info{border-color:var(--accent);color:#a8c6ff}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  td.sig{font-family:var(--mono);color:#a8c6ff}
+  td select{width:100%;font-family:var(--mono);font-size:12px}
+  .conf{font-size:11px;color:var(--muted)}
+  .conf.low{color:var(--warn)}
+  .empty{color:var(--muted);font-size:14px;padding:24px 4px;text-align:center}
+  .probe{font-size:12px;margin-top:6px;color:var(--muted)}
+  .probe b{color:var(--ok)}
+  a{color:var(--accent)}
+  nav.tabs{display:flex;gap:4px;margin-left:8px;flex-wrap:nowrap}
+  nav.tabs button{white-space:nowrap}
+  nav.tabs button{background:transparent;border:1px solid transparent;color:var(--muted);font-weight:500;padding:6px 12px;border-radius:8px}
+  nav.tabs button:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  nav.tabs button.active{background:var(--panel2);border-color:var(--line);color:var(--text)}
+  .view{padding:16px 20px}
+  .hist{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#111828}
+  .hist .bars{display:flex;align-items:flex-end;gap:2px;height:54px;margin:8px 0 4px}
+  .hist .bars div{flex:1;background:linear-gradient(180deg,var(--accent),#2f5cb8);border-radius:2px 2px 0 0;min-height:1px}
+  .hist .bars div.zero{background:#26314a}
+  .hist .meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .hist .samples{margin-top:8px;font-size:12px}
+  .hist .samples div{font-family:var(--mono);font-size:11px;color:#9fb3d9;border-top:1px solid var(--line);padding:4px 0;word-break:break-all}
+  .hist .v{font-weight:600}
+  .hist .v.ok{color:var(--ok)} .hist .v.warn{color:var(--warn)} .hist .v.error{color:var(--err)}
+  .stream-row{display:grid;grid-template-columns:1fr 110px 120px 90px;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;align-items:center;background:var(--panel2)}
+  .stream-row:hover{border-color:var(--accent)}
+  .stream-row.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,140,255,.15)}
+  .stream-row .t{font-weight:600;font-size:14px}
+  .stream-row .badge{justify-self:end;white-space:nowrap}
+  .cov-table td{padding:6px 8px}
+  .cov-miss{color:var(--warn)}
+  .advice{font-size:11px;color:var(--muted);margin-top:2px}
+  .det-row{display:grid;grid-template-columns:1fr 90px 150px;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start}
+  .det-row .t{font-weight:600;font-size:14px}
+  .det-row .d{font-size:12px;color:var(--muted);margin-top:2px}
+  .det-row .q{font-family:var(--mono);font-size:11px;color:#9fb3d9;margin-top:6px;word-break:break-all;max-height:34px;overflow:hidden}
+  .det-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .det-actions button{font-size:11px;padding:3px 9px}
+  .pill{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .pill.never{color:var(--warn);border-color:#5a4620}
+  .pill.ok{color:var(--ok);border-color:#20503a}
+  .form-grid{display:grid;grid-template-columns:220px 1fr;gap:10px 16px;align-items:center;max-width:820px}
+  .form-grid label{margin:0;font-size:13px;color:var(--muted)}
+  .form-grid input[type=text],.form-grid input[type=password],.form-grid input[type=number],.form-grid select{width:100%}
+  .hintline{font-size:12px;color:var(--muted);margin-top:4px}
+  .user{position:relative;flex:0 0 auto}
+  .user .dd{z-index:60}
+  .user button{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:500;padding:5px 10px}
+  .user .ava{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;
+    background:linear-gradient(135deg,var(--accent),#7b5cff);color:#fff;text-transform:uppercase}
+  .user .dd{position:absolute;right:0;top:calc(100% + 6px);min-width:200px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:6px;box-shadow:0 18px 40px -20px #000;display:none;z-index:20}
+  .user.open .dd{display:block}
+  .user .dd button{width:100%;justify-content:flex-start;border:0;background:transparent;padding:8px 10px;font-weight:400;border-radius:7px}
+  .user .dd button:hover{background:rgba(255,255,255,.06)}
+  .user .dd .sep{height:1px;background:var(--line);margin:5px 4px}
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:520px;width:92%}
+  dialog::backdrop{background:#000a}
+  dialog label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  dialog input,dialog textarea{width:100%}
+  dialog textarea{min-height:80px}
+</style>
+</head>
+<body>
+<header>
+  <h1>sigma<span>2</span>graylog</h1>
+  <nav class="tabs">
+    <button data-view="convert" class="active">Конвертер</button>
+    <button data-view="streams">Стримы</button>
+    <button data-view="detect">Детекты</button>
+    <button data-view="settings">Настройки</button>
+  </nav>
+  <span class="badge" id="st-graylog">Graylog: <b>…</b></span>
+  <span class="badge" id="st-fields">полей: <b>…</b></span>
+  <div class="hdr-right">
+  <label class="badge" style="cursor:pointer">стрим:
+    <select id="stream" style="border:0;background:transparent;color:inherit;padding:0 4px;font-size:12px">
+      <option value="">авто по продукту</option>
+    </select>
+  </label>
+  <button class="ghost" id="btn-refresh" title="Перечитать список полей из Graylog">Обновить поля</button>
+  <div class="user" id="user-menu">
+    <button id="user-btn" title="Аккаунт">
+      <span class="ava" id="user-ava">?</span>
+      <span id="user-name">…</span>
+      <span style="color:var(--muted);font-size:10px">▾</span>
+    </button>
+    <div class="dd">
+      <button id="menu-pass">Сменить пароль</button>
+      <div class="sep"></div>
+      <button id="menu-out">Выйти</button>
+    </div>
+  </div>
+  </div>
+</header>
+
+<main class="view" id="view-convert">
+  <section class="panel">
+    <h2>Sigma-правило</h2>
+    <div class="row">
+      <button class="ghost" id="btn-sample">Пример ↻</button>
+      <button class="ghost" id="btn-clear">Очистить</button>
+      <span class="spacer"></span>
+      <span class="badge" id="src-badge" style="display:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    </div>
+    <div class="row">
+      <select id="src-id" style="flex:1;min-width:170px">
+        <option value="">известные источники…</option>
+      </select>
+      <select id="src-product" style="max-width:130px"><option value="">продукт</option></select>
+      <select id="src-level" style="max-width:120px"><option value="">уровень</option></select>
+      <select id="src-limit" style="max-width:90px">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+      </select>
+      <button class="ghost" id="src-load">Загрузить</button>
+    </div>
+    <div class="row">
+      <input type="file" id="file-input" multiple accept=".yml,.yaml,.zip,.tar,.gz,.tgz,.bz2,.xz" style="display:none">
+      <input type="file" id="dir-input" webkitdirectory directory multiple style="display:none">
+      <button class="ghost" id="btn-files">Файлы…</button>
+      <button class="ghost" id="btn-dir">Папка…</button>
+      <input type="text" id="url-input" placeholder="https://… YAML, zip или tar.gz с правилами"
+             style="flex:1;min-width:150px;font-size:13px">
+      <button class="ghost" id="btn-url">По ссылке</button>
+    </div>
+    <textarea id="sigma" spellcheck="false" placeholder="Вставьте YAML Sigma-правила (можно несколько через ---)"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="btn-convert">Конвертировать</button>
+      <button class="ghost" id="btn-probe">Проверить в Graylog</button>
+      <span class="spacer"></span>
+      <label class="badge">период:
+        <select id="range" style="border:0;background:transparent;color:inherit;font-size:12px">
+          <option value="3600">1 час</option>
+          <option value="86400" selected>1 день</option>
+          <option value="604800">7 дней</option>
+        </select>
+      </label>
+    </div>
+    <div class="empty" id="left-hint">Вставьте правило и нажмите «Конвертировать».</div>
+  </section>
+
+  <section class="panel">
+    <h2>Результат</h2>
+    <div id="result"><div class="empty">Пока ничего не сконвертировано.</div></div>
+  </section>
+</main>
+
+<section class="view" id="view-streams" hidden>
+  <div class="panel" style="margin-bottom:14px">
+    <h2>Анализ стримов</h2>
+    <div class="row">
+      <input type="text" id="st-search" placeholder="фильтр по названию" style="flex:1;min-width:200px">
+      <button class="ghost" id="st-reload">Пересканировать</button>
+      <span class="spacer"></span>
+      <span class="badge" id="st-info">—</span>
+    </div>
+    <div id="stream-list"><div class="empty">Загружаю…</div></div>
+  </div>
+
+  <div class="panel" id="stream-detail" hidden>
+    <h2 id="sd-title">—</h2>
+    <div class="row">
+      <span class="badge" id="sd-meta"></span>
+      <span class="spacer"></span>
+      <button class="ghost" id="sd-save">Сохранить маппинг для стрима</button>
+    </div>
+    <div class="warn info" id="sd-note" style="display:none"></div>
+    <div class="row" style="margin-top:8px"><b style="font-size:13px">Покрытие типовых полей Sigma</b>
+      <span class="badge" id="sd-covered"></span></div>
+    <table class="cov-table"><thead><tr><th>поле Sigma</th><th>поле стрима</th><th>уверенность</th></tr></thead>
+      <tbody id="sd-coverage"></tbody></table>
+    <div class="row" style="margin-top:14px"><b style="font-size:13px">Поля стрима</b>
+      <input type="text" id="sd-filter" placeholder="поиск поля" style="margin-left:auto;min-width:180px"></div>
+    <div id="sd-fields" style="max-height:340px;overflow:auto"></div>
+  </div>
+</section>
+
+<section class="view" id="view-detect" hidden>
+  <div class="panel">
+    <h2>Детекты в Graylog</h2>
+    <div class="row">
+      <input type="text" id="det-search" placeholder="поиск по названию или описанию" style="flex:1;min-width:200px">
+      <select id="det-filter">
+        <option value="all">все</option>
+        <option value="never">без срабатываний</option>
+        <option value="matched">срабатывали</option>
+      </select>
+      <button class="ghost" id="det-reload">Обновить</button>
+      <span class="spacer"></span>
+      <span class="badge" id="det-stats">—</span>
+    </div>
+    <div id="det-list"><div class="empty">Загружаю…</div></div>
+    <div class="row" id="det-pager" style="justify-content:center;margin-top:12px"></div>
+  </div>
+</section>
+
+<section class="view" id="view-settings" hidden>
+  <div class="panel">
+    <h2>Подключение к Graylog</h2>
+    <div class="form-grid">
+      <label for="set-url">URL Graylog</label>
+      <div><input type="text" id="set-url" placeholder="http://graylog.example.com:9000">
+        <div class="hintline">Адрес, по которому приложение ходит в API.</div></div>
+
+      <label for="set-public">Публичный URL</label>
+      <div><input type="text" id="set-public" placeholder="не задан — будет использован URL выше">
+        <div class="hintline">Подставляется в ссылки «открыть в Graylog». Должен резолвиться с рабочих машин.</div></div>
+
+      <label for="set-mode">Авторизация</label>
+      <div><select id="set-mode">
+        <option value="basic">логин и пароль</option>
+        <option value="token">API-токен</option>
+      </select></div>
+
+      <label for="set-user">Пользователь</label>
+      <div id="row-user"><input type="text" id="set-user" placeholder="admin" autocomplete="off"></div>
+
+      <label for="set-pass">Пароль</label>
+      <div id="row-pass"><input type="password" id="set-pass" placeholder="оставьте пустым, чтобы не менять" autocomplete="new-password">
+        <div class="hintline" id="pass-state"></div></div>
+
+      <label for="set-token">API-токен</label>
+      <div id="row-token" hidden><input type="password" id="set-token" placeholder="оставьте пустым, чтобы не менять" autocomplete="new-password">
+        <div class="hintline" id="token-state"></div></div>
+
+      <label for="set-ttl">Кэш полей, сек</label>
+      <div><input type="number" id="set-ttl" min="30" max="86400" step="30"></div>
+
+      <label for="set-range">Период по умолчанию</label>
+      <div><select id="set-range">
+        <option value="3600">1 час</option>
+        <option value="86400">1 день</option>
+        <option value="604800">7 дней</option>
+        <option value="2592000">30 дней</option>
+      </select></div>
+
+      <label for="set-case">Regex без учёта регистра</label>
+      <div><label style="color:var(--text)"><input type="checkbox" id="set-case" style="width:auto">
+        раскрывать буквы в классы <code>[Pp]</code> — как в Sigma</label></div>
+
+      <label for="set-dupes">Проверять дубликаты</label>
+      <div><label style="color:var(--text)"><input type="checkbox" id="set-dupes" style="width:auto"> предупреждать, если похожий детект уже есть</label></div>
+    </div>
+
+    <div class="row" style="margin-top:18px">
+      <button class="ghost" id="set-test">Проверить соединение</button>
+      <button id="set-save">Сохранить</button>
+    </div>
+    <div id="set-status"></div>
+    <div class="hintline" style="margin-top:14px">
+      Секреты хранятся на сервере в зашифрованном виде (`/data/settings.json`, права 600) и в браузер не возвращаются.
+      Пустое поле оставляет прежнее значение.
+    </div>
+  </div>
+</section>
+
+<dialog id="dlg">
+  <h3 style="margin:0 0 6px">Создать Event Definition</h3>
+  <div class="meta">Детект появится в Graylog и начнёт выполняться по расписанию.</div>
+  <label>Название</label>
+  <input type="text" id="d-title">
+  <label>Описание</label>
+  <textarea id="d-desc"></textarea>
+  <label>Приоритет (1 — высокий, 4 — низкий)</label>
+  <input type="number" id="d-prio" min="1" max="4" value="2">
+  <label>Запрос</label>
+  <textarea id="d-query" style="font-family:var(--mono);font-size:12px"></textarea>
+  <div class="warn info" id="d-dup" style="display:none"></div>
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+    <button class="ghost" id="d-cancel">Отмена</button>
+    <button id="d-create">Создать в Graylog</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-extract">
+  <h3 style="margin:0 0 6px">Экстрактор для поля</h3>
+  <div class="meta" id="ex-meta"></div>
+  <label>Имя нового поля</label>
+  <input type="text" id="ex-target">
+  <label>Собрать из полей (через запятую, порядок важен)</label>
+  <input type="text" id="ex-sources">
+  <div class="hintline">Для auditd путь собирается как <code>cwd</code> + <code>name</code>: сначала каталог, потом имя файла.</div>
+  <label>Разделитель</label>
+  <input type="text" id="ex-sep" value="/">
+  <label>Правило pipeline для Graylog</label>
+  <textarea id="ex-rule" style="font-family:var(--mono);font-size:12px;min-height:150px"></textarea>
+  <div class="hintline">Вставьте в Graylog: System → Pipelines → нужный pipeline → New rule,
+    затем подключите правило к стриму.</div>
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+    <button class="ghost" id="ex-cancel">Закрыть</button>
+    <button id="ex-copy">Копировать правило</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-pass">
+  <h3 style="margin:0 0 6px">Смена пароля</h3>
+  <div class="meta">Пароль хранится как scrypt-хэш, смена сразу завершает другие сессии.</div>
+  <label>Текущий пароль</label>
+  <input type="password" id="p-cur" autocomplete="current-password">
+  <label>Новый пароль (минимум 8 символов)</label>
+  <input type="password" id="p-new" autocomplete="new-password">
+  <label>Повторите новый пароль</label>
+  <input type="password" id="p-rep" autocomplete="new-password">
+  <div class="warn error" id="p-err" style="display:none"></div>
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+    <button class="ghost" id="p-cancel">Отмена</button>
+    <button id="p-save">Сохранить</button>
+  </div>
+</dialog>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let state = { result: null, overrides: {}, streams: [], publicUrl: '', dets: { page: 1 } };
+
+const SAMPLE = `title: Suspicious PowerShell EncodedCommand
+id: 2f5a1c3e-1b7d-4f2a-9d3e-8c1b0a7e5d44
+status: experimental
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\\\\powershell.exe'
+        CommandLine|contains:
+            - '-enc'
+            - '-EncodedCommand'
+    filter_generic:
+        ParentImage|endswith: '\\\\explorer.exe'
+    condition: selection and not filter_generic
+falsepositives:
+    - Легитимные скрипты администрирования
+level: high
+`;
+
+async function copyText(text) {
+  // navigator.clipboard существует только в secure context (https или localhost).
+  // По HTTP на IP он недоступен, поэтому нужен запасной путь через execCommand.
+  if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* падаем в fallback */ }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    const sel = document.getSelection();
+    const prev = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    if (prev && sel) { sel.removeAllRanges(); sel.addRange(prev); }
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    ...opts,
+  });
+  if (r.status === 401) { location.replace('/login'); throw new Error('Требуется вход'); }
+  if (!r.ok) {
+    const raw = await r.text().catch(() => '');
+    let detail = 'HTTP ' + r.status;
+    try { const j = JSON.parse(raw); detail = j.detail || JSON.stringify(j); } catch (e) {
+      if (raw && raw.length < 200 && !raw.includes('<')) detail += ': ' + raw.trim();
+    }
+    throw new Error(detail);
+  }
+  return r.json();
+}
+
+async function loadStatus() {
+  try {
+    const s = await api('/api/status');
+    $('#st-graylog').className = 'badge ok';
+    $('#st-graylog').innerHTML = 'Graylog: <b>' + (s.graylog.version || '?') + '</b>';
+    $('#st-fields').className = 'badge';
+    $('#st-fields').innerHTML = 'полей: <b>' + s.fields + '</b>';
+    state.publicUrl = s.graylog_public_url || s.graylog_url || '';
+    state.demo = !!s.demo;
+  } catch (e) {
+    $('#st-graylog').className = 'badge err';
+    $('#st-graylog').innerHTML = 'Graylog: <b>нет связи</b>';
+    $('#st-fields').innerHTML = '<b>' + e.message + '</b>';
+  }
+}
+
+function fillStreamSelect(items) {
+  state.streams = items;
+  const sel = $('#stream');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">авто по продукту</option>';
+  items.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.title + (s.product ? ' · ' + s.product : '');
+    sel.appendChild(o);
+  });
+  sel.value = current;
+}
+
+async function loadStreams(withProfiles = false) {
+  try {
+    const d = await api('/api/streams' + (withProfiles ? '?profiles=true' : ''));
+    fillStreamSelect(d.streams);
+  } catch (e) { /* не критично */ }
+}
+
+function collectOverrides() {
+  const ov = {};
+  document.querySelectorAll('select[data-sigma]').forEach(el => {
+    if (el.value) ov[el.dataset.sigma] = el.value;
+  });
+  return ov;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderFields(fields) {
+  const names = Object.keys(fields).sort();
+  if (!names.length) return '';
+  const rows = names.map(f => {
+    const m = fields[f];
+    const cands = (m.candidates || []).map(c =>
+      `<option value="${esc(c.name)}" ${c.name === m.graylog_field ? 'selected' : ''}>${esc(c.name)} (${c.score})</option>`
+    ).join('');
+    const manual = m.source === 'manual' ? ' изменено вручную' : '';
+    const cls = m.confidence >= 85 ? '' : ' low';
+    return `<tr>
+      <td class="sig">${esc(f)}</td>
+      <td>
+        <select data-sigma="${esc(f)}">
+          <option value="">— нет поля —</option>
+          ${cands}
+          <option value="${esc(m.graylog_field || '')}" ${m.source !== 'manual' ? 'hidden' : ''}>${esc(m.graylog_field || '')}</option>
+        </select>
+      </td>
+      <td class="conf${cls}">${m.confidence}%${manual}</td>
+    </tr>`;
+  }).join('');
+  return `<table><thead><tr><th>поле Sigma</th><th>поле Graylog</th><th>уверенность</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="row" style="margin-top:8px"><button class="ghost" id="btn-save-map">Запомнить маппинг</button></div>`;
+}
+
+function graylogSearchUrl(query, streamId) {
+  const base = (state.publicUrl || '') + '/search';
+  const range = $('#range') ? $('#range').value : '86400';
+  const params = new URLSearchParams({
+    q: query,
+    rangetype: 'relative',
+    relative: String(range),
+  });
+  if (streamId) params.set('streamId', streamId);
+  return base + '?' + params.toString();
+}
+
+function csvCell(value) {
+  const text = String(value == null ? '' : value).replace(/"/g, '""');
+  return '"' + text + '"';
+}
+
+function downloadFile(name, content, mime) {
+  const blob = new Blob(['\ufeff' + content], { type: mime + ';charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function exportCsv() {
+  if (!state.result) return;
+  const head = ['title', 'level', 'product', 'category', 'rule_id', 'stream', 'query', 'fields', 'warnings'];
+  const rows = [head];
+  state.result.rules.forEach(r => {
+    const stream = r.stream ? r.stream.title : '';
+    const fields = Object.entries(state.result.fields)
+      .filter(([f]) => r.fields.includes(f))
+      .map(([f, m]) => f + '=' + (m.graylog_field || 'НЕТ')).join('; ');
+    const warns = (r.warnings || []).map(w => w.level + ': ' + w.message).join(' | ');
+    (r.queries.length ? r.queries : ['']).forEach(q => {
+      rows.push([r.title, r.level || '', r.product || '', r.category || '',
+                 r.rule_id || '', stream, q, fields, warns]);
+    });
+  });
+  downloadFile('sigma2graylog-' + new Date().toISOString().slice(0, 10) + '.csv',
+    rows.map(row => row.map(csvCell).join(',')).join('\r\n'), 'text/csv');
+}
+
+function exportJson() {
+  if (!state.result) return;
+  downloadFile('sigma2graylog-' + new Date().toISOString().slice(0, 10) + '.json',
+    JSON.stringify(state.result, null, 2), 'application/json');
+}
+
+function fieldsTable(fields) {
+  const names = Object.keys(fields || {}).sort();
+  if (!names.length) return '';
+  const rows = names.map(f => {
+    const m = fields[f];
+    const cands = (m.candidates || []).map(c =>
+      `<option value="${esc(c.name)}" ${c.name === m.graylog_field ? 'selected' : ''}>${esc(c.name)} (${c.score})</option>`
+    ).join('');
+    const manual = m.source === 'manual' ? ' изменено вручную' : '';
+    const cls = m.confidence >= 85 ? '' : ' low';
+    return `<tr>
+      <td class="sig">${esc(f)}</td>
+      <td><select data-sigma="${esc(f)}">
+          <option value="">— нет поля —</option>
+          ${cands}
+        </select></td>
+      <td class="conf${cls}">${m.confidence}%${manual}</td>
+    </tr>`;
+  }).join('');
+  return `<h2 style="margin-top:16px">Сопоставление полей</h2>
+    <table><thead><tr><th>поле Sigma</th><th>поле Graylog</th><th>уверенность</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <div class="row" style="margin-top:8px"><button class="ghost" id="btn-save-map">Запомнить маппинг</button></div>`;
+}
+
+function ruleCard(r, streamId) {
+  const lvl = (r.level || '').toLowerCase();
+  let html = `<div class="rule" id="card-${r.index}">
+    <h3>${esc(r.title)}</h3>
+    <div class="meta">
+      ${r.level ? `<span class="lvl ${esc(lvl)}">${esc(r.level)}</span>` : ''}
+      <span>logsource: ${esc(r.product || '?')}${r.category ? ' / ' + esc(r.category) : ''}</span>
+      ${r.stream ? `<span class="pill ok">стрим: ${esc(r.stream.title)}${r.stream.product ? ' · ' + esc(r.stream.product) : ''}</span>` : ''}
+      ${r.rule_id ? `<span>id: ${esc(r.rule_id)}</span>` : ''}
+    </div>`;
+  (r.warnings || []).forEach(w => {
+    html += `<div class="warn ${w.level === 'error' ? 'error' : (w.level === 'info' ? 'info' : '')}">${esc(w.message)}</div>`;
+  });
+  (r.similar || []).forEach(sim => {
+    const pct = Math.round((sim.score || 0) * 100);
+    const href = (state.publicUrl || '') + '/events/definitions/' + sim.id;
+    html += `<div class="warn info">Похожий детект уже есть: ` +
+      `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(sim.title)}</a> — совпадение ${pct}%` +
+      (sim.same_query ? ' (запрос идентичен)' : '') + `</div>`;
+  });
+  r.queries.forEach((q, i) => {
+    const pid = `probe-${r.index}-${i}`;
+    const searchUrl = graylogSearchUrl(q, r.stream && r.stream.id ? r.stream.id : streamId);
+    html += `<div class="query">
+      <button class="copy ghost" data-copy="${esc(q)}">копировать</button>
+      <a class="copy ghost" style="right:96px;text-decoration:none;padding:3px 9px" href="${esc(searchUrl)}" target="_blank" rel="noopener">в поиск ↗</a>
+      ${esc(q)}</div>
+      <div class="probe" id="${pid}"></div>`;
+    if (i === 0) html += `<div id="hist-${r.index}"></div>`;
+  });
+  if (r.queries.length) {
+    html += `<div class="row" style="margin-top:6px">
+      <button class="ghost" data-probe-rule="${r.index}">Проверить запрос</button>
+      <button class="ghost" data-hist-rule="${r.index}">Прогон по истории</button>
+      <button data-detect="${r.index}">Создать детект</button>
+    </div>`;
+  }
+  return html + '</div>';
+}
+
+function ruleStatus(r) {
+  const errs = (r.warnings || []).filter(w => w.level === 'error');
+  if (errs.length) return { cls: 'never', text: 'ошибка' };
+  if (!r.queries.length) return { cls: 'never', text: 'нет запроса' };
+  const dup = (r.similar || []).find(s => s.score >= 0.8);
+  if (dup) return { cls: 'never', text: 'дубль' };
+  return { cls: 'ok', text: 'готов' };
+}
+
+function priorityOf(level) {
+  return ({ critical: 1, high: 2, medium: 3, low: 4 })[(level || '').toLowerCase()] || 3;
+}
+
+function batchTable(data) {
+  state.batch = { filter: 'all', selected: new Set() };
+  data.rules.forEach(r => {
+    if (ruleStatus(r).text === 'готов' || ruleStatus(r).text === 'дубль') state.batch.selected.add(r.index);
+  });
+  const rows = data.rules.map(r => {
+    const st = ruleStatus(r);
+    const lvl = (r.level || '').toLowerCase();
+    return `<tr data-batch-row="${r.index}" data-status="${st.text}" data-level="${esc(lvl)}">
+      <td style="width:28px"><input type="checkbox" data-batch-check="${r.index}"
+          ${state.batch.selected.has(r.index) ? 'checked' : ''} style="width:auto"></td>
+      <td><a href="#" data-batch-open="${r.index}" style="color:var(--text);text-decoration:none">${esc(r.title)}</a></td>
+      <td style="width:90px">${r.level ? `<span class="lvl ${esc(lvl)}">${esc(r.level)}</span>` : ''}</td>
+      <td style="width:180px;font-size:12px;color:var(--muted)">${esc((r.stream || {}).title || '—')}</td>
+      <td style="width:90px"><span class="pill ${st.cls}">${st.text}</span></td>
+    </tr>
+    <tr data-batch-detail="${r.index}" hidden><td colspan="5" style="padding:0"></td></tr>`;
+  }).join('');
+
+  return `<div class="row" style="margin-bottom:8px">
+      <button class="ghost" data-batch-filter="all">все</button>
+      <button class="ghost" data-batch-filter="ready">готовые</button>
+      <button class="ghost" data-batch-filter="errors">с ошибками</button>
+      <button class="ghost" data-batch-filter="high">high+</button>
+      <span class="spacer"></span>
+      <span class="badge" id="batch-count"></span>
+      <button id="batch-create">Создать выбранные</button>
+    </div>
+    <table><thead><tr><th></th><th>правило</th><th>уровень</th><th>стрим</th><th>статус</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <div id="batch-result" style="margin-top:10px"></div>`;
+}
+
+function renderResult(data) {
+  if (!data.rules || !data.rules.length) {
+    $('#result').innerHTML = '<div class="empty">Правил не найдено.</div>';
+    return;
+  }
+  const streamId = $('#stream').value;
+  const head = `<div class="row" style="margin-bottom:10px">
+    <button class="ghost" id="btn-export-csv">Экспорт CSV</button>
+    <button class="ghost" id="btn-export-json">Экспорт JSON</button>
+    ${data.rules.length > 1 ? `<span class="badge">правил: <b>${data.rules.length}</b></span>` : ''}
+  </div>`;
+  if (data.rules.length === 1) {
+    $('#result').innerHTML = head + ruleCard(data.rules[0], streamId) + fieldsTable(data.fields);
+  } else {
+    $('#result').innerHTML = head + batchTable(data) + fieldsTable(data.fields);
+  }
+  bindResultHandlers(data);
+}
+
+function applyBatchFilter(filter) {
+  state.batch.filter = filter;
+  let shown = 0;
+  document.querySelectorAll('[data-batch-row]').forEach(row => {
+    const status = row.dataset.status;
+    const level = row.dataset.level;
+    let match = true;
+    if (filter === 'ready') match = (status === 'готов' || status === 'дубль');
+    else if (filter === 'errors') match = (status === 'ошибка' || status === 'нет запроса');
+    else if (filter === 'high') match = (level === 'high' || level === 'critical');
+    row.hidden = !match;
+    if (!match) {
+      const det = document.querySelector(`[data-batch-detail="${row.dataset.batchRow}"]`);
+      if (det) det.hidden = true;
+    }
+    if (match) shown++;
+  });
+  updateBatchCount(shown);
+}
+
+function updateBatchCount(shown) {
+  const el = $('#batch-count');
+  if (!el) return;
+  const n = state.batch.selected.size;
+  el.innerHTML = `выбрано: <b>${n}</b>` + (shown != null ? ` · показано: ${shown}` : '');
+}
+
+function bindResultHandlers(data) {
+  document.querySelectorAll('[data-copy]').forEach(b => {
+    b.classList.remove('ok', 'fail');
+    b.onclick = async (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      const ok = await copyText(b.dataset.copy);
+      b.classList.add(ok ? 'ok' : 'fail');
+      const t = b.textContent;
+      b.textContent = ok ? 'скопировано' : 'не удалось';
+      setTimeout(() => { b.textContent = t; b.classList.remove('ok', 'fail'); }, ok ? 1200 : 2600);
+    };
+  });
+  document.querySelectorAll('select[data-sigma]').forEach(sel => sel.onchange = () => {
+    state.overrides[sel.dataset.sigma] = sel.value;
+    doConvert();
+  });
+  const save = $('#btn-save-map');
+  if (save) save.onclick = async () => {
+    const ov = {};
+    document.querySelectorAll('select[data-sigma]').forEach(el => { if (el.value) ov[el.dataset.sigma] = el.value; });
+    await api('/api/overrides', { method: 'POST', body: JSON.stringify(ov) });
+    save.textContent = 'сохранено'; setTimeout(() => save.textContent = 'Запомнить маппинг', 1500);
+  };
+  const csvBtn = $('#btn-export-csv');
+  if (csvBtn) csvBtn.onclick = exportCsv;
+  const jsonBtn = $('#btn-export-json');
+  if (jsonBtn) jsonBtn.onclick = exportJson;
+
+  document.querySelectorAll('[data-probe-rule]').forEach(b => b.onclick = () => probeRule(+b.dataset.probeRule));
+  document.querySelectorAll('[data-hist-rule]').forEach(b => b.onclick = () => historyRule(+b.dataset.histRule));
+  document.querySelectorAll('[data-detect]').forEach(b => b.onclick = () => openDialog(+b.dataset.detect));
+
+  // --- пакетный режим ---
+  document.querySelectorAll('[data-batch-check]').forEach(cb => cb.onchange = () => {
+    const idx = +cb.dataset.batchCheck;
+    cb.checked ? state.batch.selected.add(idx) : state.batch.selected.delete(idx);
+    updateBatchCount();
+  });
+  document.querySelectorAll('[data-batch-open]').forEach(a => a.onclick = (ev) => {
+    ev.preventDefault();
+    const idx = +a.dataset.batchOpen;
+    const det = document.querySelector(`[data-batch-detail="${idx}"]`);
+    if (!det) return;
+    if (!det.hidden) { det.hidden = true; return; }
+    const cell = det.querySelector('td');
+    if (!cell.dataset.filled) {
+      const rule = state.result.rules.find(r => r.index === idx);
+      cell.innerHTML = ruleCard(rule, $('#stream').value);
+      cell.dataset.filled = '1';
+      bindResultHandlers(state.result);
+    }
+    det.hidden = false;
+  });
+  document.querySelectorAll('[data-batch-filter]').forEach(b => b.onclick = () => applyBatchFilter(b.dataset.batchFilter));
+
+  const createBtn = $('#batch-create');
+  if (createBtn) {
+    updateBatchCount();
+    createBtn.onclick = async () => {
+      const items = state.result.rules
+        .filter(r => state.batch.selected.has(r.index) && r.queries.length)
+        .map(r => ({
+          title: r.title,
+          query: r.queries[0],
+          description: `Sigma → Graylog. logsource: ${r.product || '?'}${r.category ? '/' + r.category : ''}`,
+          priority: priorityOf(r.level),
+          stream_id: (r.stream || {}).id || ($('#stream').value || null),
+        }));
+      if (!items.length) { alert('Ничего не выбрано'); return; }
+      if (!confirm(`Создать в Graylog ${items.length} детект(ов)?\n\n` +
+          items.slice(0, 8).map(i => '· ' + i.title).join('\n') +
+          (items.length > 8 ? `\n… и ещё ${items.length - 8}` : ''))) return;
+      createBtn.disabled = true;
+      createBtn.textContent = 'Создаю…';
+      try {
+        const res = await api('/api/event-definitions/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ items, confirm: true, skip_duplicates: true }),
+        });
+        const s = res.summary;
+        let html = `<div class="warn ${s.failed ? 'error' : 'info'}">` +
+          `создано: ${s.created}, пропущено дублей: ${s.skipped}, ошибок: ${s.failed}</div>`;
+        res.results.forEach(r => {
+          const icon = r.status === 'created' ? '✓' : (r.status === 'skipped' ? '↷' : '✕');
+          html += `<div class="hintline">${icon} ${esc(r.title)}` +
+            (r.reason ? ` — ${esc(r.reason)}` : '') +
+            (r.error ? ` — <span style="color:var(--err)">${esc(r.error)}</span>` : '') +
+            (r.url ? ` — <a href="${esc(r.url)}" target="_blank" rel="noopener">открыть</a>` : '') + '</div>';
+        });
+        $('#batch-result').innerHTML = html;
+        $('#det-stats').textContent = '';
+      } catch (e) {
+        $('#batch-result').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = 'Создать выбранные';
+      }
+    };
+  }
+}
+
+async function doConvert() {
+  const sigma = $('#sigma').value.trim();
+  if (!sigma) { $('#result').innerHTML = '<div class="empty">Вставьте Sigma-правило.</div>'; return; }
+  $('#btn-convert').disabled = true;
+  try {
+    const data = await api('/api/convert', {
+      method: 'POST',
+      body: JSON.stringify({
+        sigma,
+        overrides: state.overrides,
+        stream_id: $('#stream').value || null,
+      }),
+    });
+    state.result = data;
+    renderResult(data);
+    let hint = `Правил: ${data.rule_count}, полей: ${Object.keys(data.fields).length}`;
+    if (data.truncated_rules) hint += ` (в наборе ${data.total_in_input}, конвертирую первые ${data.max_rules})`;
+    $('#left-hint').textContent = hint;
+  } catch (e) {
+    $('#result').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  } finally {
+    $('#btn-convert').disabled = false;
+  }
+}
+
+function renderHistory(container, data) {
+  const max = Math.max(1, ...data.buckets.map(b => b.count));
+  const bars = data.buckets.map(b => {
+    const h = Math.round((b.count / max) * 100);
+    return `<div class="${b.count ? '' : 'zero'}" style="height:${b.count ? Math.max(3, h) : 2}%" title="${esc(b.date)}: ${b.count}"></div>`;
+  }).join('');
+  const samples = (data.samples || []).map(s =>
+    `<div>${esc((s.timestamp || '').slice(0, 19).replace('T', ' '))} · ${esc(s.source || '')} · ${esc(s.message || '')}</div>`
+  ).join('');
+  container.innerHTML = `<div class="hist">
+    <div class="meta">
+      <span class="v ${esc(data.verdict.level)}">${esc(data.verdict.text)}</span>
+      <span>всего за ${data.days} дн.: <b>${data.total}</b></span>
+      <span>макс. в сутки: <b>${data.max_per_day}</b></span>
+    </div>
+    <div class="bars">${bars}</div>
+    <div class="meta"><span>${data.buckets.length ? esc(data.buckets[0].date) : ''}</span><span class="spacer"></span><span>${data.buckets.length ? esc(data.buckets[data.buckets.length - 1].date) : ''}</span></div>
+    ${samples ? `<div class="samples"><div style="border:0;color:var(--muted)">примеры событий:</div>${samples}</div>` : '<div class="samples" style="color:var(--muted)">совпадений нет — примеров не будет</div>'}
+  </div>`;
+}
+
+async function historyRule(index) {
+  const rule = state.result.rules.find(r => r.index === index);
+  if (!rule || !rule.queries.length) return;
+  const box = document.getElementById(`hist-${index}`);
+  if (!box) return;
+  box.innerHTML = '<div class="hintline">считаю по дням…</div>';
+  try {
+    const d = await api('/api/history', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: rule.queries[0],
+        days: 30,
+        stream_id: $('#stream').value || null,
+        samples: 3,
+      }),
+    });
+    renderHistory(box, d);
+  } catch (e) {
+    box.innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  }
+}
+
+async function probeRule(index) {
+  const rule = state.result.rules.find(r => r.index === index);
+  if (!rule) return;
+  const range = +$('#range').value;
+  const stream = $('#stream').value || null;
+  for (let i = 0; i < rule.queries.length; i++) {
+    const el = document.getElementById(`probe-${index}-${i}`);
+    if (!el) continue;
+    el.textContent = 'проверяю…';
+    try {
+      const d = await api('/api/probe', {
+        method: 'POST',
+        body: JSON.stringify({ query: rule.queries[i], range_seconds: range, stream_id: stream }),
+      });
+      if (d.errors && d.errors.length) {
+        el.innerHTML = `<span style="color:var(--err)">ошибка: ${esc(d.errors.join('; '))}</span>`;
+      } else {
+        el.innerHTML = `совпадений за период: <b>${d.total_results ?? '?'}</b>`;
+      }
+    } catch (e) {
+      el.innerHTML = `<span style="color:var(--err)">${esc(e.message)}</span>`;
+    }
+  }
+}
+
+function openDialog(index) {
+  const rule = state.result.rules.find(r => r.index === index);
+  if (!rule || !rule.queries.length) return;
+  $('#d-title').value = rule.title;
+  $('#d-desc').value = `Sigma → Graylog. logsource: ${rule.product || '?'}${rule.category ? '/' + rule.category : ''}`;
+  $('#d-prio').value = rule.level === 'critical' ? 1 : rule.level === 'high' ? 2 : 3;
+  $('#d-query').value = rule.queries[0];
+  const dup = $('#d-dup');
+  if (rule.similar && rule.similar.length) {
+    dup.style.display = 'block';
+    dup.textContent = 'Похожий детект уже существует: ' + rule.similar[0].title +
+      ' (' + Math.round(rule.similar[0].score * 100) + '% совпадения).';
+  } else {
+    dup.style.display = 'none';
+  }
+  $('#dlg').showModal();
+}
+
+$('#d-cancel').onclick = () => $('#dlg').close();
+$('#d-create').onclick = async () => {
+  $('#d-create').disabled = true;
+  try {
+    const d = await api('/api/event-definition', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: $('#d-title').value,
+        description: $('#d-desc').value,
+        priority: +$('#d-prio').value,
+        query: $('#d-query').value,
+        stream_id: $('#stream').value || null,
+        confirm: true,
+      }),
+    });
+    $('#dlg').close();
+    $('#result').insertAdjacentHTML('afterbegin',
+      `<div class="warn info">Детект создан: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title || d.id)}</a></div>`);
+  } catch (e) {
+    alert('Не удалось создать: ' + e.message);
+  } finally {
+    $('#d-create').disabled = false;
+  }
+};
+
+$('#btn-convert').onclick = doConvert;
+$('#btn-probe').onclick = () => { if (state.result) state.result.rules.forEach(r => probeRule(r.index)); };
+const recentSamples = [];
+
+function setSource(text) {
+  const b = $('#src-badge');
+  if (!text) { b.style.display = 'none'; return; }
+  b.textContent = text;
+  b.style.display = 'inline-block';
+  b.title = text;
+}
+
+function applyLoaded(payload, label) {
+  if (!payload.sigma || !payload.rule_count) {
+    $('#left-hint').textContent = 'В наборе не найдено Sigma-правил';
+    return;
+  }
+  $('#sigma').value = payload.sigma;
+  const parts = [`${label}: ${payload.rule_count} правил из ${payload.file_count} файлов`];
+  if (payload.truncated) parts.push('набор обрезан по лимиту');
+  if (payload.skipped && payload.skipped.length) parts.push(`пропущено ${payload.skipped.length}`);
+  $('#left-hint').textContent = parts.join(' · ');
+  setSource(label);
+  if (payload.errors && payload.errors.length) {
+    $('#result').innerHTML = '<div class="warn error">' +
+      payload.errors.map(esc).join('<br>') + '</div>';
+  } else {
+    $('#result').innerHTML = '<div class="empty">Правила загружены. Нажмите «Конвертировать».</div>';
+  }
+}
+
+$('#btn-sample').onclick = async () => {
+  try {
+    const q = recentSamples.length ? '?exclude=' + encodeURIComponent(recentSamples.join('|')) : '';
+    const s = await api('/api/samples/random' + q);
+    $('#sigma').value = s.yaml;
+    recentSamples.push(s.title);
+    if (recentSamples.length > 8) recentSamples.shift();
+    setSource('пример ' + (recentSamples.length) + '/' + s.total + ': ' + s.title);
+    $('#left-hint').textContent = 'Источник: ' + s.source;
+  } catch (e) {
+    $('#sigma').value = SAMPLE;
+    setSource('встроенный пример');
+  }
+};
+
+async function loadSourceList() {
+  try {
+    const d = await api('/api/sources');
+    const sel = $('#src-id');
+    sel.innerHTML = '<option value="">известные источники…</option>';
+    d.sources.forEach(src => {
+      const o = document.createElement('option');
+      o.value = src.id;
+      o.textContent = src.name + (src.cached && src.cached.count ? ` · ${src.cached.count} прав.` : '');
+      o.title = src.description || '';
+      sel.appendChild(o);
+    });
+  } catch (e) { /* не критично */ }
+}
+
+function fillFacet(select, values, placeholder) {
+  const sel = $(select);
+  const current = sel.value;
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  values.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  sel.value = current;
+}
+
+$('#src-load').onclick = async () => {
+  const id = $('#src-id').value;
+  if (!id) { $('#left-hint').textContent = 'Выберите источник правил'; return; }
+  $('#src-load').disabled = true;
+  $('#src-load').textContent = 'Скачиваю…';
+  $('#left-hint').textContent = 'скачиваю источник (первый раз ~5–15 секунд)…';
+  try {
+    const payload = await api('/api/sources/' + encodeURIComponent(id) + '/fetch', {
+      method: 'POST',
+      body: JSON.stringify({
+        product: $('#src-product').value || null,
+        level: $('#src-level').value || null,
+        limit: +$('#src-limit').value || 50,
+      }),
+    });
+    applyLoaded(payload, 'источник: ' + payload.source.name);
+    $('#left-hint').textContent =
+      `${payload.source.name}: загружено ${payload.rule_count} правил ` +
+      `(под фильтр подошло ${payload.matched} из ${payload.total_available})` +
+      (payload.cached ? ' · из кэша' : '');
+    if (payload.facets) {
+      fillFacet('#src-product', payload.facets.products || [], 'продукт');
+      fillFacet('#src-level', payload.facets.levels || [], 'уровень');
+    }
+  } catch (e) {
+    $('#left-hint').textContent = 'ошибка источника: ' + e.message;
+  } finally {
+    $('#src-load').disabled = false;
+    $('#src-load').textContent = 'Загрузить';
+  }
+};
+
+$('#btn-dir').onclick = () => $('#dir-input').click();
+$('#dir-input').onchange = async (ev) => {
+  const files = Array.from(ev.target.files || []);
+  if (!files.length) return;
+  // берём только правила и архивы, чтобы не тащить .git и картинки
+  const keep = files.filter(f => /\.(ya?ml|zip|tar|gz|tgz)$/i.test(f.name));
+  if (!keep.length) { $('#left-hint').textContent = 'в выбранной папке нет yaml-правил'; return; }
+  const fd = new FormData();
+  keep.slice(0, 3000).forEach(f => fd.append('files', f, f.webkitRelativePath || f.name));
+  $('#btn-dir').disabled = true;
+  $('#left-hint').textContent = `загружаю ${keep.length} файлов из папки…`;
+  try {
+    const r = await fetch('/api/load/files', { method: 'POST', body: fd });
+    if (r.status === 401) { location.replace('/login'); return; }
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ('HTTP ' + r.status)); }
+    applyLoaded(await r.json(), 'папка');
+  } catch (err) {
+    $('#left-hint').textContent = 'ошибка загрузки папки: ' + err.message;
+  } finally {
+    $('#btn-dir').disabled = false;
+    ev.target.value = '';
+  }
+};
+
+$('#btn-files').onclick = () => $('#file-input').click();
+$('#file-input').onchange = async (ev) => {
+  const files = ev.target.files;
+  if (!files || !files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  $('#btn-files').disabled = true;
+  $('#left-hint').textContent = 'загружаю ' + files.length + ' файл(ов)…';
+  try {
+    const r = await fetch('/api/load/files', { method: 'POST', body: fd });
+    if (r.status === 401) { location.replace('/login'); return; }
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ('HTTP ' + r.status)); }
+    applyLoaded(await r.json(), 'файлы');
+  } catch (e) {
+    $('#left-hint').textContent = 'ошибка загрузки: ' + e.message;
+  } finally {
+    $('#btn-files').disabled = false;
+    ev.target.value = '';
+  }
+};
+
+$('#btn-url').onclick = async () => {
+  const url = $('#url-input').value.trim();
+  if (!url) return;
+  $('#btn-url').disabled = true;
+  $('#left-hint').textContent = 'скачиваю ' + url + '…';
+  try {
+    const payload = await api('/api/load/url', { method: 'POST', body: JSON.stringify({ url }) });
+    applyLoaded(payload, 'ссылка');
+  } catch (e) {
+    $('#left-hint').textContent = 'ошибка: ' + e.message;
+  } finally {
+    $('#btn-url').disabled = false;
+  }
+};
+$('#url-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#btn-url').click(); }
+});
+
+// drag&drop файлов на поле ввода
+const ta = $('#sigma');
+['dragenter', 'dragover'].forEach(ev => ta.addEventListener(ev, (e) => {
+  e.preventDefault(); ta.classList.add('drag');
+}));
+['dragleave', 'drop'].forEach(ev => ta.addEventListener(ev, (e) => {
+  e.preventDefault(); ta.classList.remove('drag');
+}));
+ta.addEventListener('drop', async (e) => {
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (!files || !files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  $('#left-hint').textContent = 'загружаю перетащенные файлы…';
+  try {
+    const r = await fetch('/api/load/files', { method: 'POST', body: fd });
+    if (r.status === 401) { location.replace('/login'); return; }
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ('HTTP ' + r.status)); }
+    applyLoaded(await r.json(), 'файлы');
+  } catch (err) {
+    $('#left-hint').textContent = 'ошибка загрузки: ' + err.message;
+  }
+});
+$('#btn-clear').onclick = () => { $('#sigma').value = ''; $('#result').innerHTML = '<div class="empty">Пока ничего не сконвертировано.</div>'; };
+$('#btn-refresh').onclick = async () => {
+  $('#btn-refresh').disabled = true;
+  try { const d = await api('/api/fields/refresh', { method: 'POST' }); $('#st-fields').innerHTML = 'полей: <b>' + d.fields + '</b>'; }
+  catch (e) { alert('Не удалось обновить поля: ' + e.message); }
+  finally { $('#btn-refresh').disabled = false; }
+};
+
+async function loadMe() {
+  try {
+    const me = await api('/api/me');
+    $('#user-name').textContent = me.user;
+    $('#user-ava').textContent = me.user.slice(0, 1);
+  } catch (e) { /* 401 уже обработан в api() */ }
+}
+
+$('#user-btn').onclick = (e) => {
+  e.stopPropagation();
+  $('#user-menu').classList.toggle('open');
+};
+document.addEventListener('click', () => $('#user-menu').classList.remove('open'));
+
+$('#menu-out').onclick = async () => {
+  try { await api('/logout', { method: 'POST' }); } catch (e) {}
+  location.replace('/login');
+};
+
+$('#menu-pass').onclick = () => {
+  $('#p-cur').value = $('#p-new').value = $('#p-rep').value = '';
+  $('#p-err').style.display = 'none';
+  $('#dlg-pass').showModal();
+  $('#p-cur').focus();
+};
+$('#p-cancel').onclick = () => $('#dlg-pass').close();
+$('#p-save').onclick = async () => {
+  const err = $('#p-err');
+  err.style.display = 'none';
+  const cur = $('#p-cur').value, nw = $('#p-new').value, rep = $('#p-rep').value;
+  if (!cur || !nw) { err.textContent = 'Заполните все поля'; err.style.display = 'block'; return; }
+  if (nw !== rep) { err.textContent = 'Новые пароли не совпадают'; err.style.display = 'block'; return; }
+  if (nw.length < 8) { err.textContent = 'Пароль короче 8 символов'; err.style.display = 'block'; return; }
+  $('#p-save').disabled = true;
+  try {
+    await api('/api/password', { method: 'POST', body: JSON.stringify({ current: cur, new: nw }) });
+    $('#dlg-pass').close();
+    $('#result').insertAdjacentHTML('afterbegin',
+      '<div class="warn info">Пароль изменён. Он понадобится при следующем входе.</div>');
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  } finally {
+    $('#p-save').disabled = false;
+  }
+};
+
+// ------------------------------------------------------------------ навигация
+const VIEWS = ['convert', 'streams', 'detect', 'settings'];
+
+function switchView(name, updateHash = true) {
+  if (!VIEWS.includes(name)) name = 'convert';
+  if (updateHash && location.hash.slice(1) !== name) {
+    history.replaceState(null, '', name === 'convert' ? location.pathname : '#' + name);
+  }
+  document.querySelectorAll('nav.tabs button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === name));
+  ['convert', 'streams', 'detect', 'settings'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.hidden = (v !== name);
+  });
+  if (name === 'streams' && !streamsState.items.length) loadStreamsTable();
+  if (name === 'streams' && streamsState.items.length) renderStreamsTable();
+  if (name === 'detect') loadDetections(state.dets.page || 1);
+  if (name === 'settings') loadSettings();
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+// ------------------------------------------------------------------ стримы
+let streamsState = { items: [], active: null };
+
+function streamProductPill(product) {
+  if (!product) return '<span class="pill">?</span>';
+  const cls = product === 'windows' ? 'pill' : (product === 'linux' ? 'pill ok' : 'pill');
+  return `<span class="${cls}">${esc(product)}</span>`;
+}
+
+async function loadStreamsTable(force = false) {
+  $('#stream-list').innerHTML = '<div class="empty">Сканирую стримы (выборка по 100 событий)…</div>';
+  try {
+    const d = await api('/api/streams?profiles=true' + (force ? '&refresh=true' : ''));
+    streamsState.items = d.streams.filter(s => (s.events || 0) > 0);
+    renderStreamsTable();
+    fillStreamSelect(d.streams);
+  } catch (e) {
+    $('#stream-list').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  }
+}
+
+function renderStreamsTable() {
+  const filter = ($('#st-search').value || '').toLowerCase();
+  const items = streamsState.items.filter(s => !filter || (s.title || '').toLowerCase().includes(filter));
+  $('#st-info').textContent = `стримов с событиями: ${streamsState.items.length}`;
+  if (!items.length) {
+    $('#stream-list').innerHTML = '<div class="empty">Ничего не найдено</div>';
+    return;
+  }
+  $('#stream-list').innerHTML = items.map(s => `
+    <div class="stream-row${streamsState.active === s.id ? ' active' : ''}" data-stream="${esc(s.id)}">
+      <div class="t">${esc(s.title)}</div>
+      <div>${streamProductPill(s.product)}</div>
+      <div class="badge">событий: <b>${(s.events || 0).toLocaleString('ru-RU')}</b></div>
+      <div class="badge">полей: <b>${s.fields || 0}</b></div>
+    </div>`).join('');
+  $('#stream-list').querySelectorAll('[data-stream]').forEach(el =>
+    el.onclick = () => openStream(el.dataset.stream));
+  $('#stream-list').querySelectorAll('[data-stream]').forEach(el => {
+    if (el.dataset.stream === streamsState.active) el.classList.add('active');
+  });
+}
+
+async function openStream(id) {
+  streamsState.active = id;
+  renderStreamsTable();
+  const box = $('#stream-detail');
+  box.hidden = false;
+  $('#sd-title').textContent = 'Загружаю…';
+  $('#sd-coverage').innerHTML = '';
+  $('#sd-fields').innerHTML = '';
+  try {
+    const d = await api('/api/streams/' + encodeURIComponent(id) + '/analysis');
+    streamsState.analysis = d;
+    $('#sd-title').textContent = d.stream.title;
+    $('#sd-meta').innerHTML = `${streamProductPill(d.stream.product)} · событий: <b>${(d.stream.events || 0).toLocaleString('ru-RU')}</b> · полей: <b>${d.fields.length}</b> · выборка: ${d.sampled}`;
+    $('#sd-covered').textContent = `покрыто ${d.covered} из ${d.total_checked}`;
+    const missing = d.total_checked - d.covered;
+    const note = $('#sd-note');
+    if (missing > 0) {
+      note.style.display = 'block';
+      note.innerHTML = `Не покрыто ${missing} типовых полей. Для них можно выбрать поле вручную в таблице — ` +
+        `маппинг сохраняется для этого стрима и используется при конвертации правил этого продукта.`;
+    } else {
+      note.style.display = 'none';
+    }
+    renderCoverage(d);
+    renderStreamFields(d);
+  } catch (e) {
+    $('#sd-title').textContent = 'Ошибка';
+    $('#sd-note').style.display = 'block';
+    $('#sd-note').className = 'warn error';
+    $('#sd-note').textContent = e.message;
+  }
+}
+
+function renderCoverage(d) {
+  const rows = d.coverage.map(row => {
+    const opts = (row.candidates || []).map(c =>
+      `<option value="${esc(c.name)}" ${c.name === row.graylog_field ? 'selected' : ''}>${esc(c.name)} (${Math.round(c.score)})</option>`
+    ).join('');
+    const status = row.accepted
+      ? `<span class="pill ok">${row.score ? Math.round(row.score) : '—'}</span>`
+      : '<span class="pill never">нет</span>';
+    return `<tr>
+      <td class="sig">${esc(row.sigma_field)}</td>
+      <td>
+        <select data-cov="${esc(row.sigma_field)}" style="width:100%">
+          <option value="">— нет поля —</option>
+          ${opts}
+        </select>
+        ${row.advice ? `<div class="advice">${esc(row.advice)}</div>` : ''}
+        ${row.accepted ? '' : `<button class="ghost" style="font-size:11px;padding:2px 8px;margin-top:4px"
+            data-extract="${esc(row.sigma_field)}">сделать экстрактор</button>`}
+      </td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+  $('#sd-coverage').innerHTML = rows;
+  $('#sd-coverage').querySelectorAll('[data-extract]').forEach(b =>
+    b.onclick = () => openExtractor(b.dataset.extract));
+}
+
+function renderStreamFields(d) {
+  const filter = ($('#sd-filter').value || '').toLowerCase();
+  const items = d.fields.filter(f => !filter || f.name.toLowerCase().includes(filter));
+  $('#sd-fields').innerHTML = `<table><thead><tr><th>поле</th><th>встречается</th><th></th></tr></thead><tbody>` +
+    items.map(f => `<tr>
+      <td class="sig">${esc(f.name)}</td>
+      <td>${f.coverage}%</td>
+      <td><button class="ghost" style="font-size:11px;padding:2px 8px" data-copyf="${esc(f.name)}">копировать</button></td>
+    </tr>`).join('') + '</tbody></table>';
+  $('#sd-fields').querySelectorAll('[data-copyf]').forEach(b => b.onclick = async () => {
+    await copyText(b.dataset.copyf);
+    const t = b.textContent; b.textContent = 'ок'; setTimeout(() => b.textContent = t, 1000);
+  });
+}
+
+function buildPipelineRule(target, sources, sep) {
+  const checks = sources.map(f => `has_field("${f}")`).join(" && ");
+  const parts = sources.map((f, i) =>
+    (i === 0 ? `to_string($message.${f})` : `"${sep}" + to_string($message.${f})`)).join(" + ");
+  const title = `sigma2graylog — ${target}`;
+  return `rule "${title}"
+when
+  ${checks}
+then
+  let combined = ${parts};
+  set_field("${target}", combined);
+end`;
+}
+
+function openExtractor(sigmaField) {
+  const analysis = streamsState.analysis;
+  if (!analysis) return;
+  const row = (analysis.coverage || []).find(r => r.sigma_field === sigmaField) || {};
+  const popular = (analysis.fields || []).slice(0, 6).map(f => f.name);
+  const guess = (sigmaField === 'TargetFilename') ? 'cwd,name'
+    : (sigmaField === 'CommandLine') ? 'proctitle'
+    : (sigmaField === 'Image') ? 'exe'
+    : popular.slice(0, 2).join(',');
+  $('#ex-meta').textContent = `${sigmaField} → нужно новое поле в стриме «${analysis.stream.title}»`;
+  $('#ex-target').value = (sigmaField === 'TargetFilename' ? 'file_path_full'
+    : sigmaField.toLowerCase()) ;
+  $('#ex-sources').value = guess;
+  $('#ex-sep').value = '/';
+  regenerateExtractor();
+  $('#dlg-extract').showModal();
+}
+
+function regenerateExtractor() {
+  const target = ($('#ex-target').value || '').trim().replace(/[^A-Za-z0-9_]/g, '_') || 'new_field';
+  const sep = $('#ex-sep').value || '';
+  const sources = ($('#ex-sources').value || '').split(',').map(v => v.trim())
+    .filter(v => v).map(v => v.replace(/[^A-Za-z0-9_.]/g, ''));
+  if (!sources.length) { $('#ex-rule').value = 'укажите хотя бы одно исходное поле'; return; }
+  $('#ex-rule').value = buildPipelineRule(target, sources, sep);
+}
+
+['#ex-target', '#ex-sources', '#ex-sep'].forEach(sel => {
+  const el = $(sel); if (el) el.addEventListener('input', regenerateExtractor);
+});
+$('#ex-cancel').onclick = () => $('#dlg-extract').close();
+$('#ex-copy').onclick = async () => {
+  const ok = await copyText($('#ex-rule').value);
+  $('#ex-copy').textContent = ok ? 'скопировано' : 'не удалось';
+  setTimeout(() => $('#ex-copy').textContent = 'Копировать правило', 1400);
+};
+
+$('#st-search').addEventListener('input', renderStreamsTable);
+$('#st-reload').onclick = () => loadStreamsTable(true);
+$('#sd-filter').addEventListener('input', () => {
+  if (streamsState.analysis) renderStreamFields(streamsState.analysis);
+});
+$('#sd-save').onclick = async () => {
+  if (!streamsState.active) return;
+  const payload = {};
+  document.querySelectorAll('select[data-cov]').forEach(sel => { payload[sel.dataset.cov] = sel.value; });
+  $('#sd-save').disabled = true;
+  try {
+    await api('/api/streams/' + encodeURIComponent(streamsState.active) + '/overrides',
+      { method: 'POST', body: JSON.stringify(payload) });
+    $('#sd-save').textContent = 'сохранено';
+    setTimeout(() => $('#sd-save').textContent = 'Сохранить маппинг для стрима', 1500);
+    openStream(streamsState.active);
+  } catch (e) {
+    alert('Не удалось сохранить: ' + e.message);
+  } finally {
+    $('#sd-save').disabled = false;
+  }
+};
+
+// ------------------------------------------------------------------ детекты
+function fmtDate(value) {
+  if (!value) return '—';
+  try { return new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }); }
+  catch (e) { return value; }
+}
+
+function prioLabel(p) {
+  return ({ 1: 'высокий', 2: 'средний', 3: 'низкий', 4: 'инфо' })[p] || ('P' + p);
+}
+
+async function loadDetections(page = 1) {
+  state.dets.page = page;
+  const q = $('#det-search').value.trim();
+  const filter = $('#det-filter').value;
+  $('#det-list').innerHTML = '<div class="empty">Загружаю…</div>';
+  try {
+    const d = await api(`/api/detections?page=${page}&per_page=25&filter=${encodeURIComponent(filter)}&query=${encodeURIComponent(q)}`);
+    renderDetections(d);
+  } catch (e) {
+    $('#det-list').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  }
+}
+
+function renderDetections(d) {
+  $('#det-stats').innerHTML = `всего: <b>${d.total}</b> · без срабатываний: <b>${d.stats.never_matched}</b>`;
+  if (!d.items.length) {
+    $('#det-list').innerHTML = '<div class="empty">Ничего не найдено</div>';
+    $('#det-pager').innerHTML = '';
+    return;
+  }
+  const rows = d.items.map(it => {
+    const matched = it.matched_at
+      ? `<span class="pill ok">${esc(fmtDate(it.matched_at))}</span>`
+      : '<span class="pill never">не срабатывал</span>';
+    const href = (state.publicUrl || '') + '/events/definitions/' + it.id;
+    return `<div class="det-row">
+      <div>
+        <div class="t">${esc(it.title)}</div>
+        ${it.description ? `<div class="d">${esc(it.description.slice(0, 180))}</div>` : ''}
+        <div class="q">${esc(it.query || '(пустой запрос)')}</div>
+        <div class="det-actions">
+          <button class="ghost" data-det-open="${esc(href)}">открыть в Graylog</button>
+          <button class="ghost" data-det-copy="${esc(it.query)}">копировать запрос</button>
+          <button class="ghost" data-det-del="${esc(it.id)}" data-det-title="${esc(it.title)}">удалить</button>
+        </div>
+      </div>
+      <div class="pill">${esc(prioLabel(it.priority))}</div>
+      <div>${matched}</div>
+    </div>`;
+  }).join('');
+  $('#det-list').innerHTML = rows;
+
+  $('#det-list').querySelectorAll('[data-det-open]').forEach(b => b.onclick = () =>
+    window.open(b.dataset.detOpen, '_blank', 'noopener'));
+  $('#det-list').querySelectorAll('[data-det-copy]').forEach(b => b.onclick = async (ev) => {
+    ev.stopPropagation();
+    const ok = await copyText(b.dataset.detCopy);
+    const t = b.textContent;
+    b.textContent = ok ? 'скопировано' : 'не удалось';
+    setTimeout(() => b.textContent = t, 1400);
+  });
+  $('#det-list').querySelectorAll('[data-det-del]').forEach(b => b.onclick = async () => {
+    const title = b.dataset.detTitle;
+    if (!confirm('Удалить детект «' + title + '» из Graylog? Действие необратимо.')) return;
+    b.disabled = true;
+    try {
+      await api('/api/detections/' + encodeURIComponent(b.dataset.detDel), { method: 'DELETE' });
+      loadDetections(state.dets.page);
+    } catch (e) {
+      alert('Не удалось удалить: ' + e.message);
+      b.disabled = false;
+    }
+  });
+
+  const pages = Math.max(1, Math.ceil(d.total / d.per_page));
+  $('#det-pager').innerHTML = '';
+  if (pages > 1) {
+    const prev = document.createElement('button');
+    prev.className = 'ghost'; prev.textContent = '← назад'; prev.disabled = d.page <= 1;
+    prev.onclick = () => loadDetections(d.page - 1);
+    const info = document.createElement('span');
+    info.className = 'badge'; info.textContent = `стр. ${d.page} из ${pages}`;
+    const next = document.createElement('button');
+    next.className = 'ghost'; next.textContent = 'вперёд →'; next.disabled = d.page >= pages;
+    next.onclick = () => loadDetections(d.page + 1);
+    $('#det-pager').append(prev, info, next);
+  }
+}
+
+$('#det-reload').onclick = () => loadDetections(1);
+$('#det-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadDetections(1); });
+$('#det-filter').onchange = () => loadDetections(1);
+
+// ------------------------------------------------------------------ настройки
+function toggleAuthRows() {
+  const mode = $('#set-mode').value;
+  $('#row-user').hidden = mode === 'token';
+  $('#row-pass').hidden = mode === 'token';
+  $('#row-token').hidden = mode !== 'token';
+}
+
+async function loadSettings() {
+  try {
+    const d = await api('/api/settings');
+    const s = d.settings;
+    $('#set-url').value = s.graylog_url || '';
+    $('#set-public').value = s.graylog_public_url || '';
+    $('#set-mode').value = s.auth_mode || 'basic';
+    $('#set-user').value = s.graylog_user || '';
+    $('#set-ttl').value = s.fields_ttl || 600;
+    $('#set-range').value = String(s.default_range || 86400);
+    $('#set-dupes').checked = s.check_duplicates !== false;
+    $('#set-case').checked = s.case_insensitive_regex !== false;
+    $('#set-pass').value = '';
+    $('#set-token').value = '';
+    $('#pass-state').textContent = s.has_password ? 'пароль задан' : 'пароль не задан';
+    $('#token-state').textContent = s.has_token ? 'токен задан' : 'токен не задан';
+    $('#set-status').innerHTML = '<div class="hintline">Текущее подключение: ' +
+      esc(d.effective.url) + ' · авторизация: ' + esc(d.effective.auth_mode) + '</div>';
+    toggleAuthRows();
+  } catch (e) {
+    $('#set-status').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  }
+}
+
+$('#set-mode').onchange = toggleAuthRows;
+
+function settingsPayload(includeSecrets) {
+  const p = {
+    graylog_url: $('#set-url').value.trim(),
+    graylog_public_url: $('#set-public').value.trim(),
+    auth_mode: $('#set-mode').value,
+    graylog_user: $('#set-user').value.trim(),
+    fields_ttl: +$('#set-ttl').value || 600,
+    default_range: +$('#set-range').value || 86400,
+    check_duplicates: $('#set-dupes').checked,
+    case_insensitive_regex: $('#set-case').checked,
+  };
+  if (includeSecrets) {
+    const pw = $('#set-pass').value;
+    const tk = $('#set-token').value;
+    if (pw) p.graylog_password = pw;
+    if (tk) p.graylog_token = tk;
+  }
+  return p;
+}
+
+$('#set-test').onclick = async () => {
+  const box = $('#set-status');
+  box.innerHTML = '<div class="hintline">Проверяю…</div>';
+  $('#set-test').disabled = true;
+  try {
+    const p = settingsPayload(true);
+    const r = await api('/api/settings/test', { method: 'POST', body: JSON.stringify({
+      graylog_url: p.graylog_url, auth_mode: p.auth_mode,
+      graylog_user: p.graylog_user,
+      graylog_password: p.graylog_password, graylog_token: p.graylog_token,
+    }) });
+    if (r.ok) {
+      box.innerHTML = `<div class="warn info">Соединение есть: Graylog ${esc(r.version)} (${esc(r.url)}), полей: ${r.fields}</div>`;
+    } else {
+      box.innerHTML = `<div class="warn error">Не удалось подключиться: ${esc(r.error)}</div>`;
+    }
+  } catch (e) {
+    box.innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  } finally {
+    $('#set-test').disabled = false;
+  }
+};
+
+$('#set-save').onclick = async () => {
+  $('#set-save').disabled = true;
+  try {
+    await api('/api/settings', { method: 'PUT', body: JSON.stringify(settingsPayload(true)) });
+    $('#set-status').innerHTML = '<div class="warn info">Сохранено. Кэш полей сброшен.</div>';
+    await loadSettings();
+    await loadStatus();
+  } catch (e) {
+    $('#set-status').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  } finally {
+    $('#set-save').disabled = false;
+  }
+};
+
+loadMe(); loadStatus().then(() => {
+  const h = location.hash.slice(1);
+  const [view, arg] = h.split('/');
+  if (view && VIEWS.includes(view)) switchView(view, false);
+  if (view === 'streams' && arg) {
+    setTimeout(() => { if (!streamsState.items.length) loadStreamsTable().then(() => openStream(arg)); else openStream(arg); }, 300);
+  }
+  if (state.demo) demoAutoFill();
+}); loadStreams(false); loadSourceList();
+window.addEventListener('hashchange', () => switchView(location.hash.slice(1) || 'convert', false));
+
+async function demoAutoFill() {
+  try {
+    const s = await api('/api/samples/random');
+    $('#sigma').value = s.yaml;
+    setSource('демо: ' + s.title);
+    doConvert();
+  } catch (e) { /* не критично */ }
+}
+</script>
+</body>
+</html>

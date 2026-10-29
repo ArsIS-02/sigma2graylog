@@ -1,0 +1,22 @@
+# секреты и состояние
+.env
+.env.*
+!.env.example
+data/
+*.key
+users.json
+settings.json
+overrides.json
+stream_overrides.json
+sources/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# прочее
+.DS_Store
+*.log
+screenshots/local/

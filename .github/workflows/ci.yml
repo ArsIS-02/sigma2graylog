@@ -1,0 +1,38 @@
+name: сборка и тесты
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  тесты:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Установка зависимостей
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Тесты
+        run: pytest -q tests
+
+  сборка:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Сборка образа
+        run: docker build -t sigma2graylog:ci .
+      - name: Проверка запуска (демо-режим)
+        run: |
+          docker run -d --name s2g -p 8080:8080 -e DEMO_MODE=1 sigma2graylog:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/healthz
+          curl -fsS http://127.0.0.1:8080/api/status | head -c 200
+          docker rm -f s2g
