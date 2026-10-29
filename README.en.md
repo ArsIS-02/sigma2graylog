@@ -1,5 +1,10 @@
 # sigma2graylog
 
+[![build and tests](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml/badge.svg)](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg)](https://www.python.org/)
+[![Graylog 7.x](https://img.shields.io/badge/Graylog-7.x-ff3633.svg)](https://graylog.org/)
+
 **Convert Sigma rules into Graylog detections — matched against the fields that actually exist in your indices.**
 
 Sigma rules are written in terms of Windows event fields (`Image`, `CommandLine`, `EventID`),

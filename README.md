@@ -1,5 +1,10 @@
 # sigma2graylog
 
+[![сборка и тесты](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml/badge.svg)](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml)
+[![лицензия: MIT](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-blue.svg)](LICENSE)
+[![python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg)](https://www.python.org/)
+[![Graylog 7.x](https://img.shields.io/badge/Graylog-7.x-ff3633.svg)](https://graylog.org/)
+
 **Конвертер Sigma-правил в детекты Graylog — с привязкой к полям, которые реально есть в ваших индексах.**
 
 Правила Sigma написаны в терминах Windows-полей: `Image`, `CommandLine`, `EventID`.
