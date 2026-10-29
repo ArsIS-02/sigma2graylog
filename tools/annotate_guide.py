@@ -1,7 +1,8 @@
-"""Готовит иллюстрации для руководства: обводит элементы, рисует номера и стрелки.
+"""Готовит иллюстрации для руководства: полоса-указатель + номер в левом поле.
 
-Скрипт не входит в рантайм — запускается вручную при обновлении скриншотов.
-На выходе: PNG с аннотациями + JSON с центрами обводок для CSS-анимации.
+Скрипт не входит в рантайм: запускается вручную при обновлении скриншотов.
+Положение элементов определяется по цвету фона, а не жёсткими координатами,
+поэтому мелкие правки интерфейса не ломают разметку.
 """
 from __future__ import annotations
 
@@ -15,59 +16,66 @@ ACCENT = (255, 181, 71)
 BADGE_TEXT = (36, 26, 5)
 SRC = Path("docs/screenshots")
 OUT = Path("app/static/media/guide")
-FONT_CANDIDATES = [
-    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    "/System/Library/Fonts/Helvetica.ttc",
-]
+GUTTER = 58
+FONTS = ["/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+         "/System/Library/Fonts/Helvetica.ttc"]
 
-# прямоугольники в координатах исходных скриншотов: (x1, y1, x2, y2)
+INPUT_BG = (28, 36, 56)     # поля ввода и строки таблиц
+QUERY_BG = (11, 16, 24)     # блок запроса и история
+CARD_BG = (17, 24, 40)      # карточки
+
+# target: (что ищем, x-проба, y-от, y-до, цвет) ; band: (x1, x2) в координатах кропа
 STEPS = {
-    # marks: (номер, прямоугольник в координатах исходника, смещение бейджа или (x, y) бейджа)
     "g1-connection": {
-        "source": "04-settings.png", "crop": (10, 70, 900, 670),
+        "source": "04-settings.png", "crop": (10, 70, 900, 700),
         "marks": [
-            ("1", (270, 138, 850, 172)),
-            ("2", (30, 606, 228, 644)),
+            {"label": "1", "band_y": (121, 162), "band": (250, 880)},
+            {"label": "2", "band_y": (588, 632), "band": (18, 350)},
         ],
     },
     "g2-sources": {
-        "source": "01-converter.png", "crop": (10, 100, 706, 275),
+        "source": "01-converter.png", "crop": (10, 95, 706, 280),
         "marks": [
-            ("1", (25, 183, 300, 215)),
-            ("2", (598, 183, 697, 215), (688, 152)),
+            {"label": "1", "probe": (250, 160, 240, INPUT_BG), "band": (18, 690)},
         ],
     },
     "g3-result": {
-        "source": "01-converter.png", "crop": (700, 92, 1660, 530),
+        "source": "01-converter.png", "crop": (700, 92, 1660, 545),
         "marks": [
-            ("1", (745, 273, 1630, 458)),
-            ("2", (1105, 476, 1250, 508), (1350, 492)),
+            {"label": "1", "band_y": (300, 466), "band": (24, 950)},
+            {"label": "2", "band_y": (466, 516), "band": (24, 580)},
         ],
     },
     "g4-mapping": {
         "source": "01-converter.png", "crop": (700, 548, 1660, 742),
-        "marks": [("1", (735, 610, 1648, 736))],
+        "marks": [
+            {"label": "1", "band_y": (614, 742), "band": (180, 940)},
+        ],
+    },
+    "g5-history": {
+        "source": "05-history.png", "crop": (700, 425, 1660, 745),
+        "marks": [
+            {"label": "1", "probe": (765, 425, 700, (17, 24, 40)), "band": (20, 950)},
+        ],
     },
     "g6-streams": {
-        "source": "02-streams.png", "crop": (10, 60, 1670, 872),
+        "source": "02-streams.png", "crop": (10, 60, 1670, 880),
         "marks": [
-            ("1", (30, 230, 1650, 276)),
-            ("2", (30, 600, 706, 634)),
+            {"label": "1", "probe": (1500, 200, 260, INPUT_BG), "band": (18, 1650)},
+            {"label": "2", "probe": (1200, 620, 700, INPUT_BG), "band": (18, 1650)},
         ],
     },
     "g7-detect": {
         "source": "03-detections.png", "crop": (10, 60, 1400, 520),
-        "marks": [("1", (34, 244, 292, 272))],
-    },
-    "g5-history": {
-        "source": "05-history.png", "crop": (700, 425, 1660, 740),
-        "marks": [("1", (742, 433, 1628, 550))],
+        "marks": [
+            {"label": "1", "probe": (700, 180, 300, (17, 24, 40)), "band": (18, 1380)},
+        ],
     },
 }
 
 
 def font(size: int):
-    for path in FONT_CANDIDATES:
+    for path in FONTS:
         if Path(path).exists():
             try:
                 return ImageFont.truetype(path, size)
@@ -76,82 +84,76 @@ def font(size: int):
     return ImageFont.load_default()
 
 
-def arrow(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int]) -> None:
-    draw.line([start, end], fill=ACCENT, width=3)
-    # наконечник
-    dx, dy = end[0] - start[0], end[1] - start[1]
-    length = max((dx * dx + dy * dy) ** 0.5, 1)
-    ux, uy = dx / length, dy / length
-    px, py = -uy, ux
-    size = 11
-    p1 = (end[0] - ux * size + px * size * 0.55, end[1] - uy * size + py * size * 0.55)
-    p2 = (end[0] - ux * size - px * size * 0.55, end[1] - uy * size - py * size * 0.55)
-    draw.polygon([end, p1, p2], fill=ACCENT)
+def find_band(im: Image.Image, probe, tol: int = 8, min_h: int = 16) -> tuple[int, int] | None:
+    """Ищет вертикальную полосу цвета probe[3] в столбце probe[0] между probe[1] и probe[2]."""
+    x, y0, y1, colour = probe
+    run = None
+    for y in range(y0, min(y1, im.height)):
+        p = im.getpixel((x, y))[:3]
+        hit = all(abs(p[i] - colour[i]) <= tol for i in range(3))
+        if hit and run is None:
+            run = y
+        elif not hit and run is not None:
+            if y - run >= min_h:
+                return run, y
+            run = None
+    if run is not None and min(y1, im.height) - run >= min_h:
+        return run, min(y1, im.height)
+    return None
 
 
-def annotate(name: str, spec: dict) -> dict:
-    """Кадр + левое поле с номерами: стрелки идут из поля в картинку, пересечений нет."""
-    src_path = (SRC / spec["source"]).resolve()
-    im = Image.open(src_path).convert("RGB")
+def annotate(name: str, spec: dict, src_dir: Path = SRC) -> dict:
+    im = Image.open(src_dir / spec["source"]).convert("RGB")
     x1, y1, x2, y2 = spec["crop"]
     shot = im.crop(spec["crop"])
-
-    GUTTER = 58
     canvas = Image.new("RGB", (shot.width + GUTTER, shot.height), (11, 16, 24))
     canvas.paste(shot, (GUTTER, 0))
-    # тонкая граница между полем и кадром
     ImageDraw.Draw(canvas).line([(GUTTER - 1, 0), (GUTTER - 1, shot.height)], fill=(38, 48, 72))
-    draw = ImageDraw.Draw(canvas)
+
+    overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    badge_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    bdraw = ImageDraw.Draw(badge_layer)
     centers = []
 
-    # проход 1: рамки вокруг элементов
-    for label, box, *rest in spec["marks"]:
-        bx1, by1, bx2, by2 = (box[0]-x1+GUTTER, box[1]-y1, box[2]-x1+GUTTER, box[3]-y1)
-        draw.rounded_rectangle([bx1, by1, bx2, by2], radius=9, outline=ACCENT, width=3)
-
-    # проход 2: бейджи и стрелки
-    for label, box, *rest in spec["marks"]:
-        option = rest[0] if rest else 0
-        dy = option if isinstance(option, int) else 0
-        badge_pos = option if isinstance(option, tuple) else None
-        bx1, by1, bx2, by2 = (box[0] - x1 + GUTTER, box[1] - y1,
-                              box[2] - x1 + GUTTER, box[3] - y1)
+    for mark in spec["marks"]:
+        if "band_y" in mark:
+            band = mark["band_y"]
+        else:
+            band = find_band(im, mark["probe"])
+        if band is None:
+            print(f"  ! {name}: не найдена полоса для метки {mark['label']}")
+            continue
+        top = band[0] - y1
+        bottom = band[1] - y1
+        if "band_y" not in mark:
+            top -= 3
+            bottom += 3
+        bx1, bx2 = mark["band"][0] + GUTTER, mark["band"][1] + GUTTER
+        # подсветка полосы + акцентная линия снизу
+        draw.rounded_rectangle([bx1, top, bx2, bottom], radius=8, outline=ACCENT, width=3)
+        cy = (top + bottom) // 2
 
         r = 15
-        if badge_pos:
-            cx = badge_pos[0] - x1
-            cy = badge_pos[1] - y1
-            right_side = cx > (bx1 + bx2) / 2
-            below = cy < by1 - 4
+        cx = GUTTER // 2
+        # длинный пунктир только если полоса начинается рядом с полем;
+        # иначе — короткая стрелка у края, чтобы не перечёркивать подписи
+        if bx1 - (cx + r) <= 70:
+            for xx in range(cx + r + 4, bx1 - 16, 9):
+                bdraw.line([(xx, cy), (xx + 5, cy)], fill=(150, 118, 48, 255), width=2)
+            arrow_x = bx1 - 16
         else:
-            cx = GUTTER // 2
-            cy = int((by1 + by2) / 2) + dy
-            right_side = False
-        cy = max(r + 4, min(cy, canvas.height - r - 4))
-        cx = max(r + 2, min(cx, canvas.width - r - 2))
-        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=ACCENT)
-        draw.text((cx, cy), label, font=font(19), fill=BADGE_TEXT, anchor="mm")
-        if badge_pos and cy < by1 - 4:
-            # бейдж над элементом: короткая стрелка вниз
-            for yy in range(cy + r + 4, by1 - 14, 8):
-                draw.line([(cx, yy), (cx, yy + 4)], fill=(120, 96, 40), width=2)
-            arrow(draw, (cx, by1 - 14), (cx, by1 - 3))
-        elif right_side:
-            # бейдж справа: пунктир от него влево к элементу
-            for xx in range(bx2 + 18, cx - r - 6, 10):
-                draw.line([(xx, cy), (xx + 5, cy)], fill=(120, 96, 40), width=2)
-            arrow(draw, (bx2 + 18, cy), (bx2 + 3, cy))
-        else:
-            for xx in range(cx + r + 4, bx1 - 18, 10):
-                draw.line([(xx, cy), (xx + 5, cy)], fill=(120, 96, 40), width=2)
-            target_y = by2 - 8 if dy > 0 else (by1 + 8 if dy < 0 else cy)
-            arrow(draw, (bx1 - 18, cy), (bx1 - 3, target_y))
-        centers.append({
-            "label": label,
-            "x": round(cx / canvas.width * 100, 1),
-            "y": round(cy / canvas.height * 100, 1),
-        })
+            arrow_x = bx1 - 2
+        bdraw.polygon([(bx1 - 1, cy), (arrow_x - 13, cy - 6), (arrow_x - 13, cy + 6)],
+                      fill=(255, 181, 71, 255))
+        bdraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=ACCENT)
+        bdraw.text((cx, cy), mark["label"], font=font(19), fill=BADGE_TEXT, anchor="mm")
+        centers.append({"label": mark["label"],
+                        "x": round(cx / canvas.width * 100, 1),
+                        "y": round(cy / canvas.height * 100, 1)})
 
+    canvas = Image.alpha_composite(canvas.convert("RGBA"), overlay)
+    canvas = Image.alpha_composite(canvas, badge_layer).convert("RGB")
     OUT.mkdir(parents=True, exist_ok=True)
     canvas.save(OUT / f"{name}.png")
     return {"size": canvas.size, "centers": centers}
@@ -164,7 +166,7 @@ def main() -> None:
         if only and only != name:
             continue
         result[name] = annotate(name, spec)
-        print(f"{name}: {result[name]['size']} центры={result[name]['centers']}")
+        print(f"{name}: {result[name]['size']} {result[name]['centers']}")
     Path("tools/guide-points.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
 
 

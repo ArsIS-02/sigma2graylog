@@ -117,6 +117,9 @@
     background:rgba(79,140,255,.07);border-radius:0 8px 8px 0;color:#bcd0f0}
   .tip b{color:#fff}
   .guide-foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .btn-link{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);text-decoration:none;font-size:14px}
+  .btn-link:hover{border-color:var(--accent);color:#fff}
   .steps-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
   .steps-nav a{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
     border-radius:999px;padding:4px 10px}
@@ -286,8 +289,8 @@
         пользователь с паролем или API-токен.</p>
       <div class="shot">
         <img src="/static/guide/g1-connection.png" alt="Настройки подключения к Graylog">
-        <span class="halo" style="left:3.1%;top:14.2%"></span>
-        <span class="halo" style="left:3.1%;top:92.5%"></span>
+        <span class="halo" style="left:3.1%;top:11.3%"></span>
+        <span class="halo" style="left:3.1%;top:85.7%"></span>
       </div>
       <ul>
         <li><b>1</b> — URL и авторизация. Публичный URL нужен для ссылок «в поиск» и «открыть детект».</li>
@@ -303,13 +306,12 @@
       <p>Вкладка <b>«Конвертер»</b>. Правило можно получить четырьмя способами.</p>
       <div class="shot">
         <img src="/static/guide/g2-sources.png" alt="Источники Sigma-правил">
-        <span class="halo" style="left:3.8%;top:56.6%"></span>
-        <span class="halo" style="left:89.9%;top:29.7%"></span>
+        <span class="halo" style="left:3.8%;top:53.0%"></span>
       </div>
       <ul>
-        <li><b>1</b> — «известные источники…»: SigmaHQ (все правила, core, master), ThreatHunting Keywords,
-          SIGMA detection rules. Есть фильтры по продукту и уровню.</li>
-        <li><b>2</b> — «Загрузить»: качает набор (первый раз ~6 секунд), кэш на сутки.</li>
+        <li><b>1</b> — строка загрузки из каталога: «известные источники…» (SigmaHQ: все правила,
+          core, master; ThreatHunting Keywords; SIGMA detection rules), фильтры по продукту и уровню,
+          и кнопка <b>«Загрузить»</b> — качает набор (первый раз ~6 секунд), кэш на сутки.</li>
         <li>Ещё два пути: <b>«Пример ↻»</b> подставляет случайное правило из встроенных,
           а <b>«Файлы…» / «Папка…»</b> и drag&amp;drop берут ваши YAML, zip или tar.gz.</li>
       </ul>
@@ -321,8 +323,8 @@
       <p>Нажмите <b>«Конвертировать»</b> — справа появится запрос для Graylog.</p>
       <div class="shot">
         <img src="/static/guide/g3-result.png" alt="Результат конвертации">
-        <span class="halo" style="left:2.8%;top:62.3%"></span>
-        <span class="halo" style="left:63.9%;top:91.3%"></span>
+        <span class="halo" style="left:2.8%;top:64.2%"></span>
+        <span class="halo" style="left:2.8%;top:88.1%"></span>
       </div>
       <ul>
         <li><b>1</b> — сам запрос. Кнопки <b>«копировать»</b> и <b>«в поиск ↗»</b> — вторая открывает
@@ -343,7 +345,7 @@
         инструмент уверен.</p>
       <div class="shot">
         <img src="/static/guide/g4-mapping.png" alt="Сопоставление полей">
-        <span class="halo" style="left:2.8%;top:64.4%"></span>
+        <span class="halo" style="left:2.8%;top:67.0%"></span>
       </div>
       <ul>
         <li><b>1</b> — выпадающий список: можно выбрать другое поле вручную.</li>
@@ -360,7 +362,7 @@
       <p>Прежде чем создавать детект, посмотрите, как правило вело себя последние 30 дней.</p>
       <div class="shot">
         <img src="/static/guide/g5-history.png" alt="Прогон по истории">
-        <span class="halo" style="left:2.8%;top:21.0%"></span>
+        <span class="halo" style="left:2.8%;top:40.9%"></span>
       </div>
       <ul>
         <li><b>1</b> — гистограмма по дням, сумма и максимум за сутки.</li>
@@ -383,7 +385,7 @@
       </ul>
       <div class="shot">
         <img src="/static/guide/g7-detect.png" alt="Список созданных детектов">
-        <span class="halo" style="left:2.0%;top:43.0%"></span>
+        <span class="halo" style="left:2.0%;top:32.0%"></span>
       </div>
       <div class="tip">Детект создаётся с <b>alert: false</b> и без уведомлений. Включить нотификации
         можно в самом Graylog — инструмент намеренно этого не делает.</div>
@@ -395,8 +397,8 @@
       <p>Вкладка <b>«Стримы»</b> показывает, насколько ваши данные вообще подходят для правил Sigma.</p>
       <div class="shot">
         <img src="/static/guide/g6-streams.png" alt="Анализ стримов">
-        <span class="halo" style="left:1.7%;top:23.8%"></span>
-        <span class="halo" style="left:1.7%;top:68.6%"></span>
+        <span class="halo" style="left:1.7%;top:23.0%"></span>
+        <span class="halo" style="left:1.7%;top:76.5%"></span>
       </div>
       <ul>
         <li><b>1</b> — стрим: продукт определён по полям, видно объём и число полей.</li>
@@ -420,9 +422,9 @@
         <li>Фильтры и список полей кэшируются — «Обновить поля» в шапке сбрасывает кэш.</li>
       </ul>
       <div class="guide-foot">
-        <button class="ghost" id="guide-to-settings">Перейти в настройки</button>
-        <button class="ghost" id="guide-to-convert">К конвертеру</button>
-        <button class="ghost" id="guide-to-streams">К стримам</button>
+        <a class="btn-link" href="#settings">Перейти в настройки</a>
+        <a class="btn-link" href="#convert">К конвертеру</a>
+        <a class="btn-link" href="#streams">К стримам</a>
       </div>
     </div>
   </div>
@@ -1448,10 +1450,7 @@ function switchView(name, updateHash = true) {
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => switchView(b.dataset.view));
 
 // ------------------------------------------------------------------ руководство
-['settings', 'convert', 'streams'].forEach(name => {
-  const btn = document.getElementById('guide-to-' + name);
-  if (btn) btn.onclick = () => { switchView(name); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-});
+
 
 // ------------------------------------------------------------------ стримы
 let streamsState = { items: [], active: null };
