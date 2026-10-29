@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="sigma2graylog">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#7b5cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="113" fill="url(#bg)"/>
+  <!-- Σ: ломаная с закруглёнными стыками -->
+  <polyline points="335,125 177,125 279,256 177,387 335,387"
+            fill="none" stroke="#ffffff" stroke-width="44"
+            stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- точка-детект -->
+  <circle cx="397" cy="125" r="28" fill="#ffffff"/>
+  <circle cx="397" cy="125" r="13" fill="#4f8cff"/>
+</svg>

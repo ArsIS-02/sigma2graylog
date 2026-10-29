@@ -1,4 +1,8 @@
-# sigma2graylog
+<p align="center">
+  <img src="docs/logo.svg" width="104" alt="sigma2graylog">
+</p>
+
+<h1 align="center">sigma2graylog</h1>
 
 [![сборка и тесты](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml/badge.svg)](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml)
 [![лицензия: MIT](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-blue.svg)](LICENSE)
