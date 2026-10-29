@@ -34,7 +34,7 @@
   .badge b{color:var(--text);font-weight:600}
   .badge.ok b{color:var(--ok)} .badge.err b{color:var(--err)}
   .spacer{flex:1}
-  select,input[type=text],input[type=number],textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;outline:none}
+  select,input[type=text],input[type=number],input[type=password],textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;outline:none}
   select:focus,textarea:focus,input:focus{border-color:var(--accent)}
   button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
   button:hover{filter:brightness(1.1)}
@@ -78,6 +78,49 @@
   nav.tabs button:hover{color:var(--text);background:rgba(255,255,255,.04)}
   nav.tabs button.active{background:var(--panel2);border-color:var(--line);color:var(--text)}
   .view{padding:16px 20px}
+  /* --- руководство --- */
+  .guide-wrap{max-width:1020px;margin:0 auto}
+  .guide-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .guide-head h2{margin:0;font-size:20px}
+  .guide-lead{color:var(--muted);font-size:14px;margin:0 0 22px}
+  .step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px 22px 74px;margin-bottom:18px}
+  .step .num{position:absolute;left:20px;top:18px;width:36px;height:36px;border-radius:50%;
+    display:grid;place-items:center;font-weight:700;font-size:16px;color:#fff;
+    background:linear-gradient(135deg,var(--accent),#7b5cff);box-shadow:0 8px 20px -10px #4f8cffcc}
+  .step h3{margin:4px 0 6px;font-size:16px}
+  .step p{margin:0 0 10px;font-size:14px;color:#c9d4ea;line-height:1.55}
+  .step .shot + ul{margin-top:14px}
+  .step ul{margin:0 0 12px;padding-left:18px;font-size:14px;color:#c9d4ea;line-height:1.6}
+  .step code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px}
+  .shot{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0b1018}
+  .shot img{display:block;width:100%;height:auto}
+  /* указатель: пульсирующая точка + прыгающая стрелка */
+  .ptr{position:absolute;transform:translate(-50%,-50%);pointer-events:none;width:0;height:0}
+  /* полое кольцо вокруг элемента — текст внутри остаётся читаемым */
+  .ptr .ring{position:absolute;left:-34px;top:-24px;width:68px;height:48px;border-radius:14px;
+    border:2px solid #ffb547;box-shadow:0 0 0 9999px rgba(0,0,0,0);
+    animation:ring 2s ease-out infinite}
+  /* номер и стрелка — снаружи, над кольцом */
+  .ptr .dot{position:absolute;left:-46px;top:-48px;display:grid;place-items:center;
+    width:26px;height:26px;border-radius:50%;background:#ffb547;color:#241a05;
+    font-weight:800;font-size:13px;box-shadow:0 4px 14px -4px #000;animation:pulse 2s infinite}
+  .ptr .arr{position:absolute;left:-24px;top:-38px;font-size:19px;color:#ffb547;
+    filter:drop-shadow(0 2px 6px #000);animation:float 1.6s ease-in-out infinite}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(255,181,71,.65)}
+    70%{box-shadow:0 0 0 14px rgba(255,181,71,0)}
+    100%{box-shadow:0 0 0 0 rgba(255,181,71,0)}
+  }
+  @keyframes ring{0%{transform:scale(.92);opacity:0}30%{opacity:1}100%{transform:scale(1.18);opacity:0}}
+  @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(6px,-6px)}}
+  .tip{border-left:3px solid var(--accent);padding:8px 12px;margin-top:12px;font-size:13px;
+    background:rgba(79,140,255,.07);border-radius:0 8px 8px 0;color:#bcd0f0}
+  .tip b{color:#fff}
+  .guide-foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .steps-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+  .steps-nav a{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+    border-radius:999px;padding:4px 10px}
+  .steps-nav a:hover{color:var(--text);border-color:var(--accent)}
   .hist{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#111828}
   .hist .bars{display:flex;align-items:flex-end;gap:2px;height:54px;margin:8px 0 4px}
   .hist .bars div{flex:1;background:linear-gradient(180deg,var(--accent),#2f5cb8);border-radius:2px 2px 0 0;min-height:1px}
@@ -137,6 +180,7 @@
     <button data-view="streams">Стримы</button>
     <button data-view="detect">Детекты</button>
     <button data-view="settings">Настройки</button>
+    <button data-view="guide">Руководство</button>
   </nav>
   <span class="badge" id="st-graylog">Graylog: <b>…</b></span>
   <span class="badge" id="st-fields">полей: <b>…</b></span>
@@ -215,6 +259,175 @@
   </section>
 </main>
 
+
+<section class="view" id="view-guide" hidden>
+  <div class="guide-wrap">
+    <div class="guide-head">
+      <h2>Как пользоваться</h2>
+      <span class="badge">7 шагов · 5 минут</span>
+    </div>
+    <p class="guide-lead">Путь от подключения к Graylog до работающего детекта, который уже проверен
+      на ваших данных. Всё, что нажимается, отмечено пульсирующими указателями.</p>
+
+    <nav class="steps-nav">
+      <a href="#guide-1">1. Подключение</a>
+      <a href="#guide-2">2. Правило</a>
+      <a href="#guide-3">3. Конвертация</a>
+      <a href="#guide-4">4. Маппинг</a>
+      <a href="#guide-5">5. История</a>
+      <a href="#guide-6">6. Детект</a>
+      <a href="#guide-7">7. Стримы</a>
+    </nav>
+
+    <div class="step" id="guide-1">
+      <span class="num">1</span>
+      <h3>Подключитесь к Graylog</h3>
+      <p>Вкладка <b>«Настройки»</b>. Укажите адрес Graylog и способ авторизации — сервисный
+        пользователь с паролем или API-токен.</p>
+      <div class="shot">
+        <img src="/static/guide/g1-connection.png" alt="Настройки подключения к Graylog">
+        <span class="halo" style="left:3.1%;top:14.4%"></span>
+        <span class="halo" style="left:3.1%;top:94.1%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — URL и авторизация. Публичный URL нужен для ссылок «в поиск» и «открыть детект».</li>
+        <li><b>2</b> — «Проверить соединение» проверяет введённое <i>до сохранения</i> и показывает версию и число полей.</li>
+      </ul>
+      <div class="tip"><b>Секреты</b> хранятся на сервере в зашифрованном виде и в браузер не возвращаются.
+        Пустое поле при сохранении оставляет прежнее значение.</div>
+    </div>
+
+    <div class="step" id="guide-2">
+      <span class="num">2</span>
+      <h3>Возьмите Sigma-правило</h3>
+      <p>Вкладка <b>«Конвертер»</b>. Правило можно получить четырьмя способами.</p>
+      <div class="shot">
+        <img src="/static/guide/g2-sources.png" alt="Источники Sigma-правил">
+        <span class="halo" style="left:3.8%;top:38.1%"></span>
+        <span class="halo" style="left:3.8%;top:38.1%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — «известные источники…»: SigmaHQ (все правила, core, master), ThreatHunting Keywords,
+          SIGMA detection rules. Есть фильтры по продукту и уровню.</li>
+        <li><b>2</b> — «Загрузить»: качает набор (первый раз ~6 секунд), кэш на сутки.</li>
+        <li>Ещё два пути: <b>«Пример ↻»</b> подставляет случайное правило из встроенных,
+          а <b>«Файлы…» / «Папка…»</b> и drag&amp;drop берут ваши YAML, zip или tar.gz.</li>
+      </ul>
+    </div>
+
+    <div class="step" id="guide-3">
+      <span class="num">3</span>
+      <h3>Сконвертируйте и прочитайте результат</h3>
+      <p>Нажмите <b>«Конвертировать»</b> — справа появится запрос для Graylog.</p>
+      <div class="shot">
+        <img src="/static/guide/g3-result.png" alt="Результат конвертации">
+        <span class="halo" style="left:2.8%;top:50.8%"></span>
+        <span class="halo" style="left:2.8%;top:77.3%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — сам запрос. Кнопки <b>«копировать»</b> и <b>«в поиск ↗»</b> — вторая открывает
+          готовый поиск в Graylog с нужным периодом и стримом.</li>
+        <li><b>2</b> — <b>«Создать детект»</b>. Рядом — «Проверить запрос» и «Прогон по истории».</li>
+        <li>Цветные плашки над запросом — предупреждения: ненайденные поля, неоднозначный маппинг,
+          переписанные модификаторы.</li>
+      </ul>
+      <div class="tip">Правило помечено производительным предупреждением? Это не ошибка —
+        инструмент честно говорит, что <code>contains</code>/<code>endswith</code> пришлось
+        перевести в regex, потому что ведущий wildcard Graylog не принимает.</div>
+    </div>
+
+    <div class="step" id="guide-4">
+      <span class="num">4</span>
+      <h3>Проверьте сопоставление полей</h3>
+      <p>Таблица под результатом показывает, какое поле Sigma во что превратилось и насколько
+        инструмент уверен.</p>
+      <div class="shot">
+        <img src="/static/guide/g4-mapping.png" alt="Сопоставление полей">
+        <span class="halo" style="left:2.8%;top:25.3%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — выпадающий список: можно выбрать другое поле вручную.</li>
+        <li>Уверенность ниже 85% подсвечивается — стоит посмотреть глазами.</li>
+        <li><b>«Запомнить маппинг»</b> сохраняет выбор и подставляет его в следующих конвертациях.</li>
+      </ul>
+      <div class="tip">Поля нет вовсе (красное предупреждение)? Идём в шаг 7 — во вкладке «Стримы»
+        видно, чего не хватает в вашем стриме и как это добавить.</div>
+    </div>
+
+    <div class="step" id="guide-5">
+      <span class="num">5</span>
+      <h3>Прогоните правило по истории</h3>
+      <p>Прежде чем создавать детект, посмотрите, как правило вело себя последние 30 дней.</p>
+      <div class="shot">
+        <img src="/static/guide/g5-history.png" alt="Прогон по истории">
+        <span class="halo" style="left:2.8%;top:39.8%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — гистограмма по дням, сумма и максимум за сутки.</li>
+        <li>Вердикт: «не срабатывает ни разу» — правило смотрит не туда; «очень шумно» — это не детект,
+          а поток.</li>
+        <li>Ниже — три реальных события: по ним видно, что именно ловит правило.</li>
+      </ul>
+    </div>
+
+    <div class="step" id="guide-6">
+      <span class="num">6</span>
+      <h3>Создайте детект</h3>
+      <p>Один — кнопкой <b>«Создать детект»</b> в карточке правила. Пачку — через пакетный режим.</p>
+      <ul>
+        <li>В пакетном режиме таблица правил с фильтрами «все / готовые / с ошибками / high+».</li>
+        <li>Кнопка <b>«Создать выбранные»</b> спрашивает подтверждение и показывает отчёт
+          «создано / пропущено дублей / ошибок».</li>
+        <li>Дубли (совпадение ≥ 80% по запросу или названию) пропускаются автоматически.</li>
+        <li>Созданные детекты видны во вкладке <b>«Детекты»</b> — там же поиск и удаление.</li>
+      </ul>
+      <div class="shot">
+        <img src="/static/guide/g7-detect.png" alt="Список созданных детектов">
+        <span class="halo" style="left:2.0%;top:30.9%"></span>
+      </div>
+      <div class="tip">Детект создаётся с <b>alert: false</b> и без уведомлений. Включить нотификации
+        можно в самом Graylog — инструмент намеренно этого не делает.</div>
+    </div>
+
+    <div class="step" id="guide-7">
+      <span class="num">7</span>
+      <h3>Разберитесь со стримами</h3>
+      <p>Вкладка <b>«Стримы»</b> показывает, насколько ваши данные вообще подходят для правил Sigma.</p>
+      <div class="shot">
+        <img src="/static/guide/g6-streams.png" alt="Анализ стримов">
+        <span class="halo" style="left:1.7%;top:30.8%"></span>
+        <span class="halo" style="left:1.7%;top:89.9%"></span>
+      </div>
+      <ul>
+        <li><b>1</b> — стрим: продукт определён по полям, видно объём и число полей.</li>
+        <li><b>2</b> — покрытие типовых полей Sigma и ручной маппинг именно для этого стрима.</li>
+        <li>У непокрытого поля есть кнопка <b>«сделать экстрактор»</b>: она собирает готовое правило
+          pipeline для Graylog, которое создаёт недостающее поле.</li>
+      </ul>
+      <div class="tip">Классический случай: в auditd путь разбит на <code>cwd</code> и <code>name</code>,
+        поэтому <code>TargetFilename</code> не работает. Экстрактор собирает <code>file_path_full</code>
+        из двух полей — и правило начинает находить события.</div>
+    </div>
+
+    <div class="step">
+      <span class="num">✓</span>
+      <h3>Полезно знать</h3>
+      <ul>
+        <li>За раз конвертируется до <b>60</b> правил, загружается до <b>300</b>, создаётся до <b>50</b>.</li>
+        <li>Вкладки доступны по ссылке: <code>#streams</code>, <code>#detect</code>, <code>#settings</code>,
+          <code>#guide</code>.</li>
+        <li>Регистронезависимость включается в настройках: буквы раскрываются в <code>[Pp]</code>.</li>
+        <li>Фильтры и список полей кэшируются — «Обновить поля» в шапке сбрасывает кэш.</li>
+      </ul>
+      <div class="guide-foot">
+        <button class="ghost" id="guide-to-settings">Перейти в настройки</button>
+        <button class="ghost" id="guide-to-convert">К конвертеру</button>
+        <button class="ghost" id="guide-to-streams">К стримам</button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="view" id="view-streams" hidden>
   <div class="panel" style="margin-bottom:14px">
     <h2>Анализ стримов</h2>
@@ -282,14 +495,14 @@
         <option value="token">API-токен</option>
       </select></div>
 
-      <label for="set-user">Пользователь</label>
+      <label for="set-user" id="lbl-user">Пользователь</label>
       <div id="row-user"><input type="text" id="set-user" placeholder="admin" autocomplete="off"></div>
 
-      <label for="set-pass">Пароль</label>
+      <label for="set-pass" id="lbl-pass">Пароль</label>
       <div id="row-pass"><input type="password" id="set-pass" placeholder="оставьте пустым, чтобы не менять" autocomplete="new-password">
         <div class="hintline" id="pass-state"></div></div>
 
-      <label for="set-token">API-токен</label>
+      <label for="set-token" id="lbl-token">API-токен</label>
       <div id="row-token" hidden><input type="password" id="set-token" placeholder="оставьте пустым, чтобы не менять" autocomplete="new-password">
         <div class="hintline" id="token-state"></div></div>
 
@@ -1214,7 +1427,7 @@ $('#p-save').onclick = async () => {
 };
 
 // ------------------------------------------------------------------ навигация
-const VIEWS = ['convert', 'streams', 'detect', 'settings'];
+const VIEWS = ['convert', 'streams', 'detect', 'settings', 'guide'];
 
 function switchView(name, updateHash = true) {
   if (!VIEWS.includes(name)) name = 'convert';
@@ -1223,7 +1436,7 @@ function switchView(name, updateHash = true) {
   }
   document.querySelectorAll('nav.tabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === name));
-  ['convert', 'streams', 'detect', 'settings'].forEach(v => {
+  VIEWS.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.hidden = (v !== name);
   });
@@ -1233,6 +1446,12 @@ function switchView(name, updateHash = true) {
   if (name === 'settings') loadSettings();
 }
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+// ------------------------------------------------------------------ руководство
+['settings', 'convert', 'streams'].forEach(name => {
+  const btn = document.getElementById('guide-to-' + name);
+  if (btn) btn.onclick = () => { switchView(name); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+});
 
 // ------------------------------------------------------------------ стримы
 let streamsState = { items: [], active: null };
@@ -1523,9 +1742,13 @@ $('#det-filter').onchange = () => loadDetections(1);
 // ------------------------------------------------------------------ настройки
 function toggleAuthRows() {
   const mode = $('#set-mode').value;
-  $('#row-user').hidden = mode === 'token';
-  $('#row-pass').hidden = mode === 'token';
-  $('#row-token').hidden = mode !== 'token';
+  const tokenMode = mode === 'token';
+  ['#row-user', '#lbl-user', '#row-pass', '#lbl-pass'].forEach(sel => {
+    const el = $(sel); if (el) el.hidden = tokenMode;
+  });
+  ['#row-token', '#lbl-token'].forEach(sel => {
+    const el = $(sel); if (el) el.hidden = !tokenMode;
+  });
 }
 
 async function loadSettings() {
@@ -1627,7 +1850,11 @@ async function demoAutoFill() {
     const s = await api('/api/samples/random');
     $('#sigma').value = s.yaml;
     setSource('демо: ' + s.title);
-    doConvert();
+    await doConvert();
+    // ?history=1 — раскрыть прогон по истории (для скриншотов руководства)
+    if (new URLSearchParams(location.search).get('history') === '1') {
+      setTimeout(() => historyRule(0), 400);
+    }
   } catch (e) { /* не критично */ }
 }
 </script>

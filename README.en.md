@@ -35,6 +35,7 @@ historical data — before you create a detection.
 | **Rule sources** | built-in catalog of public Sigma sets (SigmaHQ, ThreatHunting Keywords, ...) |
 | **Extractor generator** | emits a Graylog pipeline rule for a field missing in your stream |
 | **Settings UI** | Graylog URL, token or password, cache TTL, defaults — secrets encrypted at rest |
+| **Built-in guide** | a "Guide" tab: seven annotated steps with animated pointers |
 
 ![Streams](docs/screenshots/02-streams.png)
 
