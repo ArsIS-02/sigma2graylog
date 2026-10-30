@@ -11,7 +11,8 @@ from sigma.processing.pipeline import ProcessingItem, ProcessingPipeline
 from sigma.processing.transformations import FieldMappingTransformation
 from sigma.rule import SigmaDetection, SigmaDetectionItem
 
-from .lucene_fix import describe, fix_query
+from .i18n import tr
+from .lucene_fix import describe_codes, fix_query
 
 
 class ConversionError(RuntimeError):
@@ -59,14 +60,14 @@ def product_of(rule) -> str | None:
 
 
 def _warnings(rule, mapping: dict, queries: list[str], meta: dict | None = None,
-              case_insensitive: bool = False) -> list[dict]:
+              case_insensitive: bool = False, lang: str = "ru") -> list[dict]:
     out: list[dict] = []
     unknown = [f for f, m in mapping.items() if not m.get("graylog_field")]
     if unknown:
         out.append({
             "level": "error",
             "code": "unknown_fields",
-            "message": "Поля отсутствуют в индексах Graylog: " + ", ".join(sorted(unknown)),
+            "message": tr(lang, "unknown_fields", fields=", ".join(sorted(unknown))),
             "fields": sorted(unknown),
         })
     cross = []
@@ -80,9 +81,8 @@ def _warnings(rule, mapping: dict, queries: list[str], meta: dict | None = None,
         out.append({
             "level": "error",
             "code": "cross_product_field",
-            "message": (f"Поле «{field}» найдено только в полях продукта {foreign_product}, "
-                        f"а правило для {(meta or {}).get('product') or 'другого продукта'} — "
-                        f"в индексах такого поля нет"),
+            "message": tr(lang, "foreign_product", field=field, foreign=foreign_product,
+                        own=(meta or {}).get("product") or "—"),
             "fields": [field],
         })
 
@@ -93,24 +93,20 @@ def _warnings(rule, mapping: dict, queries: list[str], meta: dict | None = None,
         out.append({
             "level": "warn",
             "code": "auditd_path_split",
-            "message": ("В auditd путь разбит на два поля: cwd (каталог) и name (имя файла), "
-                        "поэтому startswith по полному пути может не сработать. "
-                        "Проверьте на истории и при необходимости ограничьте запрос вручную"),
+            "message": tr(lang, "auditd_path"),
         })
     if meta.get("no_stream_for_product"):
         out.append({
             "level": "warn",
             "code": "no_stream_for_product",
-            "message": (f"Для продукта «{meta.get('product')}» не нашлось стрима с событиями — "
-                        f"маппинг по общему списку полей индексов"),
+            "message": tr(lang, "no_stream_for_product", product=meta.get("product")),
         })
     if meta.get("product") and meta.get("product_present") is False:
         out.append({
             "level": "warn",
             "code": "product_missing",
-            "message": (f"В индексах не видно полей продукта «{meta['product']}» "
-                        f"(есть: {', '.join(meta.get('products_available') or []) or 'нет'}). "
-                        f"Возможно, источник логов не подключён"),
+            "message": tr(lang, "product_absent", product=meta["product"],
+                        available=", ".join(meta.get("products_available") or []) or "—"),
         })
 
     weak = [f for f, m in mapping.items()
@@ -119,38 +115,37 @@ def _warnings(rule, mapping: dict, queries: list[str], meta: dict | None = None,
         out.append({
             "level": "warn",
             "code": "weak_mapping",
-            "message": "Сопоставление полей неуверенное, проверьте вручную: " + ", ".join(sorted(weak)),
+            "message": tr(lang, "weak_mapping", fields=", ".join(sorted(weak))),
             "fields": sorted(weak),
         })
     for q in queries:
-        for note in describe(q, case_insensitive):
-            out.append({"level": "info", "code": "query_rewrite", "message": note})
+        for code in describe_codes(q, case_insensitive):
+            out.append({"level": "info", "code": "query_rewrite", "message": tr(lang, code)})
     ambiguous = [f for f, m in mapping.items() if m.get("ambiguous")]
     if ambiguous:
         out.append({
             "level": "warn",
             "code": "ambiguous_mapping",
-            "message": "Несколько полей подходят одинаково хорошо, выберите вручную: "
-                       + ", ".join(sorted(ambiguous)),
+            "message": tr(lang, "ambiguous_mapping", fields=", ".join(sorted(ambiguous))),
             "fields": sorted(ambiguous),
         })
     if any(re.search(r":\*", q) for q in queries):
         out.append({
             "level": "warn",
             "code": "leading_wildcard",
-            "message": "Запрос содержит wildcard в начале значения (:*) — в Graylog это дорого на больших периодах.",
+            "message": tr(lang, "leading_wildcard"),
         })
     if getattr(rule.logsource, "product", None) is None:
         out.append({
             "level": "info",
             "code": "no_product",
-            "message": "В правиле не указан logsource.product — маппинг полей будет менее точным.",
+            "message": tr(lang, "no_logsource_product"),
         })
     if not queries:
         out.append({
             "level": "error",
             "code": "empty_result",
-            "message": "Бэкенд не выдал ни одного запроса.",
+            "message": tr(lang, "no_query"),
         })
     return out
 
@@ -170,12 +165,12 @@ class ConvertedRule:
 
 
 def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = None,
-            max_rules: int = 60, case_insensitive: bool = False) -> dict:
+            max_rules: int = 60, case_insensitive: bool = False, lang: str = "ru") -> dict:
     """mapping_for(product, fields) -> dict (см. mapping.build_mapping)."""
     try:
         collection = SigmaCollection.from_yaml(sigma_text)
     except Exception as exc:  # noqa: BLE001 - показываем текст ошибки пользователю
-        raise ConversionError(f"Не удалось разобрать YAML: {exc}") from exc
+        raise ConversionError(tr(lang, "yaml_error", error=exc)) from exc
 
     rules_out: list[ConvertedRule] = []
     all_fields: dict[str, dict] = {}
@@ -201,10 +196,10 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
         for f in fields:
             all_fields[f] = mapping[f]
 
-        warnings = _warnings(rule, mapping, queries, meta, case_insensitive)
+        warnings = _warnings(rule, mapping, queries, meta, case_insensitive, lang)
         if err:
             warnings.insert(0, {"level": "error", "code": "backend_error",
-                                "message": f"Ошибка конвертации: {err}"})
+                                "message": tr(lang, "convert_error", error=err)})
         rules_out.append(ConvertedRule(
             index=idx,
             title=getattr(rule, "title", "") or f"rule-{idx}",

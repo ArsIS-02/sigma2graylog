@@ -84,18 +84,15 @@ def fix_query(query: str, case_insensitive: bool = False) -> str:
     return query
 
 
-def describe(query: str, case_insensitive: bool = False) -> list[str]:
-    """Человекочитаемые замечания к запросу."""
+def describe_codes(query: str, case_insensitive: bool = False) -> list[str]:
+    """Коды замечаний к запросу (текст подставляет слой i18n)."""
     notes = []
     if ":/" in query:
-        if case_insensitive:
-            notes.append(
-                "contains/endswith переведены в regex без учёта регистра (символьные классы, "
-                "как в Sigma) — запрос длиннее, но точнее."
-            )
-        else:
-            notes.append(
-                "contains/endswith переведены в regex: Graylog не принимает незакавыченный "
-                "leading wildcard. Regex в Graylog регистрозависимый."
-            )
+        notes.append("case_insensitive" if case_insensitive else "regex_rewrite")
     return notes
+
+
+def describe(query: str, case_insensitive: bool = False) -> list[str]:
+    """Человекочитаемые замечания к запросу (по умолчанию по-русски)."""
+    from .i18n import tr
+    return [tr("ru", code) for code in describe_codes(query, case_insensitive)]

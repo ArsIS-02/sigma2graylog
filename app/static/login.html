@@ -73,6 +73,10 @@
   .msg{margin-top:14px;font-size:13px;border-radius:9px;padding:9px 12px;display:none}
   .msg.err{display:block;background:rgba(255,95,109,.1);border:1px solid rgba(255,95,109,.35);color:#ffb3b8}
   .msg.ok{display:block;background:rgba(55,214,122,.1);border:1px solid rgba(55,214,122,.35);color:#9ff0bf}
+  .lang-switch{display:flex;border:1px solid #26324a;border-radius:8px;overflow:hidden;width:max-content}
+  .lang-switch button{background:transparent;border:0;color:#8b9ac2;font-size:12px;font-weight:600;
+    padding:5px 10px;cursor:pointer}
+  .lang-switch button.active{background:#4f8cff;color:#fff}
   .foot{margin-top:18px;text-align:center;font-size:12px;color:var(--muted)}
   .foot code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px}
 </style>
@@ -104,6 +108,9 @@
         <button class="eye" type="button" id="eye" title="Показать пароль" aria-label="Показать пароль">👁</button>
       </div>
 
+      <div class="lang-switch" style="margin:0 0 12px">
+        <button type="button" data-lang="ru" class="active">RU</button><button type="button" data-lang="en">EN</button>
+      </div>
       <button class="submit" type="submit" id="go">Войти</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -166,5 +173,6 @@ form.onsubmit = async (e) => {
   }
 };
 </script>
+<script src="/js/i18n.js"></script>
 </body>
 </html>

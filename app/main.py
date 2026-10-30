@@ -20,6 +20,7 @@ from . import detections as detections_mod
 from . import demo as demo_mod
 from . import loader, samples, sources as sources_mod
 from . import mapping as mapping_mod
+from .i18n import lang_of
 from .settings import SettingsStore
 from .auth import (COOKIE_NAME, MIN_PASSWORD_LEN, SESSION_TTL, Sessions,
                    Throttle, UserStore)
@@ -52,6 +53,7 @@ app = FastAPI(title="sigma2graylog", docs_url=None, redoc_url=None)
 
 MEDIA_DIR = STATIC / "media"
 app.mount("/static", StaticFiles(directory=MEDIA_DIR), name="static")
+app.mount("/js", StaticFiles(directory=STATIC / "js"), name="js")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -395,7 +397,7 @@ def streams(profiles: bool = False):
 
 
 @app.post("/api/convert", dependencies=[Depends(current_user)])
-def convert(req: ConvertRequest):
+def convert(req: ConvertRequest, request: Request):
     cfg = effective_config()
     g = client(cfg)
     try:
@@ -435,7 +437,8 @@ def convert(req: ConvertRequest):
             return result
 
         result = converter.convert(req.sigma, mapping_for, overrides,
-                                   case_insensitive=cfg["case_insensitive_regex"])
+                                   case_insensitive=cfg["case_insensitive_regex"],
+                                   lang=request_lang(request))
         want_dupes = req.check_duplicates
         if want_dupes is None:
             want_dupes = cfg["check_duplicates"]
@@ -1003,6 +1006,11 @@ def change_password(req: PasswordRequest, response: Response,
 
 
 NO_CACHE = {"Cache-Control": "no-store, must-revalidate"}
+
+
+def request_lang(request: Request) -> str:
+    """Язык ответа: заголовок X-Lang от интерфейса, иначе Accept-Language, иначе русский."""
+    return lang_of(request.headers.get("x-lang") or request.headers.get("accept-language"))
 
 
 @app.get("/", response_class=HTMLResponse)

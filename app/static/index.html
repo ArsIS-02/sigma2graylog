@@ -22,6 +22,10 @@
   [hidden]{display:none !important}
   body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;row-gap:8px;position:relative;z-index:40}
+  .lang-switch{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:0 0 auto}
+  .lang-switch button{background:transparent;border:0;color:var(--muted);font-size:12px;font-weight:600;
+    padding:5px 9px;cursor:pointer}
+  .lang-switch button.active{background:var(--accent);color:#fff}
   .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;flex:0 0 auto}
   .brand img{display:block;border-radius:8px}
   .brand:hover h1{color:#fff}
@@ -196,6 +200,9 @@
   <span class="badge" id="st-graylog">Graylog: <b>…</b></span>
   <span class="badge" id="st-fields">полей: <b>…</b></span>
   <div class="hdr-right">
+    <div class="lang-switch" title="Язык интерфейса / Interface language">
+      <button data-lang="ru" class="active">RU</button><button data-lang="en">EN</button>
+    </div>
   <label class="badge" style="cursor:pointer">стрим:
     <select id="stream" style="border:0;background:transparent;color:inherit;padding:0 4px;font-size:12px">
       <option value="">авто по продукту</option>
@@ -272,170 +279,7 @@
 
 
 <section class="view" id="view-guide" hidden>
-  <div class="guide-wrap">
-    <div class="guide-head">
-      <h2>Как пользоваться</h2>
-      <span class="badge">7 шагов · 5 минут</span>
-    </div>
-    <p class="guide-lead">Путь от подключения к Graylog до работающего детекта, который уже проверен
-      на ваших данных. Всё, что нажимается, отмечено пульсирующими указателями.</p>
-
-    <nav class="steps-nav">
-      <a href="#guide-1">1. Подключение</a>
-      <a href="#guide-2">2. Правило</a>
-      <a href="#guide-3">3. Конвертация</a>
-      <a href="#guide-4">4. Маппинг</a>
-      <a href="#guide-5">5. История</a>
-      <a href="#guide-6">6. Детект</a>
-      <a href="#guide-7">7. Стримы</a>
-    </nav>
-
-    <div class="step" id="guide-1">
-      <span class="num">1</span>
-      <h3>Подключитесь к Graylog</h3>
-      <p>Вкладка <b>«Настройки»</b>. Укажите адрес Graylog и способ авторизации — сервисный
-        пользователь с паролем или API-токен.</p>
-      <div class="shot">
-        <img src="/static/guide/g1-connection.png" alt="Настройки подключения к Graylog">
-        <span class="halo" style="left:3.1%;top:11.3%"></span>
-        <span class="halo" style="left:3.1%;top:85.7%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — URL и авторизация. Публичный URL нужен для ссылок «в поиск» и «открыть детект».</li>
-        <li><b>2</b> — «Проверить соединение» проверяет введённое <i>до сохранения</i> и показывает версию и число полей.</li>
-      </ul>
-      <div class="tip"><b>Секреты</b> хранятся на сервере в зашифрованном виде и в браузер не возвращаются.
-        Пустое поле при сохранении оставляет прежнее значение.</div>
-    </div>
-
-    <div class="step" id="guide-2">
-      <span class="num">2</span>
-      <h3>Возьмите Sigma-правило</h3>
-      <p>Вкладка <b>«Конвертер»</b>. Правило можно получить четырьмя способами.</p>
-      <div class="shot">
-        <img src="/static/guide/g2-sources.png" alt="Источники Sigma-правил">
-        <span class="halo" style="left:3.8%;top:53.0%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — строка загрузки из каталога: «известные источники…» (SigmaHQ: все правила,
-          core, master; ThreatHunting Keywords; SIGMA detection rules), фильтры по продукту и уровню,
-          и кнопка <b>«Загрузить»</b> — качает набор (первый раз ~6 секунд), кэш на сутки.</li>
-        <li>Ещё два пути: <b>«Пример ↻»</b> подставляет случайное правило из встроенных,
-          а <b>«Файлы…» / «Папка…»</b> и drag&amp;drop берут ваши YAML, zip или tar.gz.</li>
-      </ul>
-    </div>
-
-    <div class="step" id="guide-3">
-      <span class="num">3</span>
-      <h3>Сконвертируйте и прочитайте результат</h3>
-      <p>Нажмите <b>«Конвертировать»</b> — справа появится запрос для Graylog.</p>
-      <div class="shot">
-        <img src="/static/guide/g3-result.png" alt="Результат конвертации">
-        <span class="halo" style="left:2.8%;top:64.2%"></span>
-        <span class="halo" style="left:2.8%;top:88.1%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — сам запрос. Кнопки <b>«копировать»</b> и <b>«в поиск ↗»</b> — вторая открывает
-          готовый поиск в Graylog с нужным периодом и стримом.</li>
-        <li><b>2</b> — <b>«Создать детект»</b>. Рядом — «Проверить запрос» и «Прогон по истории».</li>
-        <li>Цветные плашки над запросом — предупреждения: ненайденные поля, неоднозначный маппинг,
-          переписанные модификаторы.</li>
-      </ul>
-      <div class="tip">Правило помечено производительным предупреждением? Это не ошибка —
-        инструмент честно говорит, что <code>contains</code>/<code>endswith</code> пришлось
-        перевести в regex, потому что ведущий wildcard Graylog не принимает.</div>
-    </div>
-
-    <div class="step" id="guide-4">
-      <span class="num">4</span>
-      <h3>Проверьте сопоставление полей</h3>
-      <p>Таблица под результатом показывает, какое поле Sigma во что превратилось и насколько
-        инструмент уверен.</p>
-      <div class="shot">
-        <img src="/static/guide/g4-mapping.png" alt="Сопоставление полей">
-        <span class="halo" style="left:2.8%;top:67.0%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — выпадающий список: можно выбрать другое поле вручную.</li>
-        <li>Уверенность ниже 85% подсвечивается — стоит посмотреть глазами.</li>
-        <li><b>«Запомнить маппинг»</b> сохраняет выбор и подставляет его в следующих конвертациях.</li>
-      </ul>
-      <div class="tip">Поля нет вовсе (красное предупреждение)? Идём в шаг 7 — во вкладке «Стримы»
-        видно, чего не хватает в вашем стриме и как это добавить.</div>
-    </div>
-
-    <div class="step" id="guide-5">
-      <span class="num">5</span>
-      <h3>Прогоните правило по истории</h3>
-      <p>Прежде чем создавать детект, посмотрите, как правило вело себя последние 30 дней.</p>
-      <div class="shot">
-        <img src="/static/guide/g5-history.png" alt="Прогон по истории">
-        <span class="halo" style="left:2.8%;top:40.9%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — гистограмма по дням, сумма и максимум за сутки.</li>
-        <li>Вердикт: «не срабатывает ни разу» — правило смотрит не туда; «очень шумно» — это не детект,
-          а поток.</li>
-        <li>Ниже — три реальных события: по ним видно, что именно ловит правило.</li>
-      </ul>
-    </div>
-
-    <div class="step" id="guide-6">
-      <span class="num">6</span>
-      <h3>Создайте детект</h3>
-      <p>Один — кнопкой <b>«Создать детект»</b> в карточке правила. Пачку — через пакетный режим.</p>
-      <ul>
-        <li>В пакетном режиме таблица правил с фильтрами «все / готовые / с ошибками / high+».</li>
-        <li>Кнопка <b>«Создать выбранные»</b> спрашивает подтверждение и показывает отчёт
-          «создано / пропущено дублей / ошибок».</li>
-        <li>Дубли (совпадение ≥ 80% по запросу или названию) пропускаются автоматически.</li>
-        <li>Созданные детекты видны во вкладке <b>«Детекты»</b> — там же поиск и удаление.</li>
-      </ul>
-      <div class="shot">
-        <img src="/static/guide/g7-detect.png" alt="Список созданных детектов">
-        <span class="halo" style="left:2.0%;top:32.0%"></span>
-      </div>
-      <div class="tip">Детект создаётся с <b>alert: false</b> и без уведомлений. Включить нотификации
-        можно в самом Graylog — инструмент намеренно этого не делает.</div>
-    </div>
-
-    <div class="step" id="guide-7">
-      <span class="num">7</span>
-      <h3>Разберитесь со стримами</h3>
-      <p>Вкладка <b>«Стримы»</b> показывает, насколько ваши данные вообще подходят для правил Sigma.</p>
-      <div class="shot">
-        <img src="/static/guide/g6-streams.png" alt="Анализ стримов">
-        <span class="halo" style="left:1.7%;top:23.0%"></span>
-        <span class="halo" style="left:1.7%;top:76.5%"></span>
-      </div>
-      <ul>
-        <li><b>1</b> — стрим: продукт определён по полям, видно объём и число полей.</li>
-        <li><b>2</b> — покрытие типовых полей Sigma и ручной маппинг именно для этого стрима.</li>
-        <li>У непокрытого поля есть кнопка <b>«сделать экстрактор»</b>: она собирает готовое правило
-          pipeline для Graylog, которое создаёт недостающее поле.</li>
-      </ul>
-      <div class="tip">Классический случай: в auditd путь разбит на <code>cwd</code> и <code>name</code>,
-        поэтому <code>TargetFilename</code> не работает. Экстрактор собирает <code>file_path_full</code>
-        из двух полей — и правило начинает находить события.</div>
-    </div>
-
-    <div class="step">
-      <span class="num">✓</span>
-      <h3>Полезно знать</h3>
-      <ul>
-        <li>За раз конвертируется до <b>60</b> правил, загружается до <b>300</b>, создаётся до <b>50</b>.</li>
-        <li>Вкладки доступны по ссылке: <code>#streams</code>, <code>#detect</code>, <code>#settings</code>,
-          <code>#guide</code>.</li>
-        <li>Регистронезависимость включается в настройках: буквы раскрываются в <code>[Pp]</code>.</li>
-        <li>Фильтры и список полей кэшируются — «Обновить поля» в шапке сбрасывает кэш.</li>
-      </ul>
-      <div class="guide-foot">
-        <a class="btn-link" href="#settings">Перейти в настройки</a>
-        <a class="btn-link" href="#convert">К конвертеру</a>
-        <a class="btn-link" href="#streams">К стримам</a>
-      </div>
-    </div>
-  </div>
+  <div class="guide-wrap" id="guide-root"></div>
 </section>
 
 <section class="view" id="view-streams" hidden>
@@ -541,8 +385,9 @@
     </div>
     <div id="set-status"></div>
     <div class="hintline" style="margin-top:14px">
-      Секреты хранятся на сервере в зашифрованном виде (`/data/settings.json`, права 600) и в браузер не возвращаются.
-      Пустое поле оставляет прежнее значение.
+      <span>Секреты хранятся на сервере в зашифрованном виде</span>
+      <span>(`/data/settings.json`, права 600) и в браузер не возвращаются.</span>
+      <span>Пустое поле оставляет прежнее значение.</span>
     </div>
   </div>
 </section>
@@ -602,6 +447,7 @@
 </dialog>
 
 <script>
+const T = (s) => (window.I18N ? window.I18N.t(s) : s);
 const $ = (s) => document.querySelector(s);
 let state = { result: null, overrides: {}, streams: [], publicUrl: '', dets: { page: 1 } };
 
@@ -652,8 +498,10 @@ async function copyText(text) {
 }
 
 async function api(path, opts = {}) {
+  const lang = window.I18N ? window.I18N.lang()
+    : (new URLSearchParams(location.search).get('lang') || localStorage.getItem('s2g_lang') || 'ru');
   const r = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Lang': lang },
     credentials: 'same-origin',
     ...opts,
   });
@@ -1021,7 +869,7 @@ function bindResultHandlers(data) {
           priority: priorityOf(r.level),
           stream_id: (r.stream || {}).id || ($('#stream').value || null),
         }));
-      if (!items.length) { alert('Ничего не выбрано'); return; }
+      if (!items.length) { alert(T('Ничего не выбрано')); return; }
       if (!confirm(`Создать в Graylog ${items.length} детект(ов)?\n\n` +
           items.slice(0, 8).map(i => '· ' + i.title).join('\n') +
           (items.length > 8 ? `\n… и ещё ${items.length - 8}` : ''))) return;
@@ -1184,7 +1032,7 @@ $('#d-create').onclick = async () => {
     $('#result').insertAdjacentHTML('afterbegin',
       `<div class="warn info">Детект создан: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title || d.id)}</a></div>`);
   } catch (e) {
-    alert('Не удалось создать: ' + e.message);
+    alert(T('Не удалось создать: ') + e.message);
   } finally {
     $('#d-create').disabled = false;
   }
@@ -1390,7 +1238,7 @@ $('#btn-clear').onclick = () => {
 $('#btn-refresh').onclick = async () => {
   $('#btn-refresh').disabled = true;
   try { const d = await api('/api/fields/refresh', { method: 'POST' }); $('#st-fields').innerHTML = 'полей: <b>' + d.fields + '</b>'; }
-  catch (e) { alert('Не удалось обновить поля: ' + e.message); }
+  catch (e) { alert(T('Не удалось обновить поля: ') + e.message); }
   finally { $('#btn-refresh').disabled = false; }
 };
 
@@ -1651,7 +1499,7 @@ $('#sd-save').onclick = async () => {
     setTimeout(() => $('#sd-save').textContent = 'Сохранить маппинг для стрима', 1500);
     openStream(streamsState.active);
   } catch (e) {
-    alert('Не удалось сохранить: ' + e.message);
+    alert(T('Не удалось сохранить: ') + e.message);
   } finally {
     $('#sd-save').disabled = false;
   }
@@ -1721,13 +1569,13 @@ function renderDetections(d) {
   });
   $('#det-list').querySelectorAll('[data-det-del]').forEach(b => b.onclick = async () => {
     const title = b.dataset.detTitle;
-    if (!confirm('Удалить детект «' + title + '» из Graylog? Действие необратимо.')) return;
+    if (!confirm(T('Удалить детект «') + title + T('» из Graylog? Действие необратимо.'))) return;
     b.disabled = true;
     try {
       await api('/api/detections/' + encodeURIComponent(b.dataset.detDel), { method: 'DELETE' });
       loadDetections(state.dets.page);
     } catch (e) {
-      alert('Не удалось удалить: ' + e.message);
+      alert(T('Не удалось удалить: ') + e.message);
       b.disabled = false;
     }
   });
@@ -1849,7 +1697,8 @@ $('#set-save').onclick = async () => {
 loadMe(); loadStatus().then(() => {
   const h = location.hash.slice(1);
   const [view, arg] = h.split('/');
-  const owner = VIEWS.find(v => h === v || h.startsWith(v + '-'));
+  // поддерживаем и '#streams/<id>', и якоря вида '#guide-3'
+  const owner = VIEWS.includes(view) ? view : VIEWS.find(v => h.startsWith(v + '-'));
   if (owner) switchView(owner, false);
   if (view === 'streams' && arg) {
     setTimeout(() => { if (!streamsState.items.length) loadStreamsTable().then(() => openStream(arg)); else openStream(arg); }, 300);
@@ -1880,5 +1729,7 @@ async function demoAutoFill() {
   } catch (e) { /* не критично */ }
 }
 </script>
+<script src="/js/i18n.js"></script>
+<script src="/js/guide.js"></script>
 </body>
 </html>

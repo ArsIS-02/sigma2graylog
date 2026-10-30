@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 ACCENT = (255, 181, 71)
 BADGE_TEXT = (36, 26, 5)
 SRC = Path("docs/screenshots")
+SRC_EN = Path("docs/screenshots/en")
 OUT = Path("app/static/media/guide")
 GUTTER = 58
 FONTS = ["/System/Library/Fonts/Supplemental/Arial Bold.ttf",
@@ -45,18 +46,27 @@ STEPS = {
             {"label": "1", "band_y": (300, 466), "band": (24, 950)},
             {"label": "2", "band_y": (466, 516), "band": (24, 580)},
         ],
+        "en": {"crop": (700, 92, 1660, 478),
+               "marks": [
+                   {"label": "1", "band_y": (300, 404), "band": (24, 950)},
+                   {"label": "2", "band_y": (410, 456), "band": (24, 580)},
+               ]},
     },
     "g4-mapping": {
         "source": "01-converter.png", "crop": (700, 548, 1660, 742),
         "marks": [
             {"label": "1", "band_y": (614, 742), "band": (180, 940)},
         ],
+        "en": {"crop": (700, 556, 1660, 716),
+               "marks": [{"label": "1", "band_y": (600, 712), "band": (180, 940)}]},
     },
     "g5-history": {
         "source": "05-history.png", "crop": (700, 425, 1660, 745),
         "marks": [
             {"label": "1", "probe": (765, 425, 700, (17, 24, 40)), "band": (20, 950)},
         ],
+        "en": {"crop": (700, 425, 1660, 800),
+               "marks": [{"label": "1", "band_y": (433, 560), "band": (20, 950)}]},
     },
     "g6-streams": {
         "source": "02-streams.png", "crop": (10, 60, 1670, 880),
@@ -102,7 +112,7 @@ def find_band(im: Image.Image, probe, tol: int = 8, min_h: int = 16) -> tuple[in
     return None
 
 
-def annotate(name: str, spec: dict, src_dir: Path = SRC) -> dict:
+def annotate(name: str, spec: dict, src_dir: Path = SRC, out_name: str | None = None) -> dict:
     im = Image.open(src_dir / spec["source"]).convert("RGB")
     x1, y1, x2, y2 = spec["crop"]
     shot = im.crop(spec["crop"])
@@ -155,19 +165,26 @@ def annotate(name: str, spec: dict, src_dir: Path = SRC) -> dict:
     canvas = Image.alpha_composite(canvas.convert("RGBA"), overlay)
     canvas = Image.alpha_composite(canvas, badge_layer).convert("RGB")
     OUT.mkdir(parents=True, exist_ok=True)
-    canvas.save(OUT / f"{name}.png")
+    canvas.save(OUT / f"{out_name or name}.png")
     return {"size": canvas.size, "centers": centers}
 
 
 def main() -> None:
     only = sys.argv[1] if len(sys.argv) > 1 else None
+    lang = sys.argv[2] if len(sys.argv) > 2 else "ru"
+    src_dir = SRC_EN if lang == "en" else SRC
+    suffix = ".en" if lang == "en" else ""
     result = {}
     for name, spec in STEPS.items():
         if only and only != name:
             continue
-        result[name] = annotate(name, spec)
-        print(f"{name}: {result[name]['size']} {result[name]['centers']}")
-    Path("tools/guide-points.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
+        if lang == "en" and "en" in spec:
+            spec = {**spec, **spec["en"]}
+        data = annotate(name, spec, src_dir=src_dir, out_name=f"{name}{suffix}")
+        result[name] = data
+        print(f"{name}{suffix}: {data['size']} {data['centers']}")
+    if not suffix:
+        Path("tools/guide-points.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
