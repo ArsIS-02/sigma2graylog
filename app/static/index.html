@@ -1716,6 +1716,19 @@ function routeHash(raw) {
 }
 window.addEventListener('hashchange', () => routeHash(location.hash.slice(1)));
 
+// смена языка: серверные сообщения (предупреждения, вердикты) уже пришли на старом языке —
+// перезапрашиваем данные активной вкладки, чтобы всё обновилось без перезагрузки страницы
+document.addEventListener('langchange', () => {
+  const active = VIEWS.find((v) => {
+    const el = document.getElementById('view-' + v);
+    return el && !el.hidden;
+  });
+  if (active === 'streams') loadStreamsTable(true);
+  else if (active === 'detect') loadDetections((state.dets && state.dets.page) || 1);
+  else if (active === 'settings') loadSettings();
+  else if (active === 'convert' && $('#sigma').value.trim()) doConvert();
+});
+
 async function demoAutoFill() {
   try {
     const fixed = new URLSearchParams(location.search).get('sample');

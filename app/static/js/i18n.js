@@ -337,6 +337,13 @@
   }
 
   function translateTextNode(node) {
+    // возврат на русский: восстанавливаем сохранённый оригинал даже если
+    // сейчас в узле английский текст (в нём нет кириллицы)
+    if (lang === 'ru') {
+      const saved = originals.get(node);
+      if (saved !== undefined && node.nodeValue !== saved) node.nodeValue = saved;
+      return;
+    }
     const value = node.nodeValue;
     if (!value || !/[А-Яа-яЁё]/.test(value)) return;
     if (node.parentElement && node.parentElement.closest('script,style,textarea,code,pre')) return;
@@ -346,7 +353,6 @@
     const trail = base.match(/\s*$/)[0];
     const core = base.trim();
     if (!core) return;
-    if (lang === 'ru') { node.nodeValue = base; return; }
     let out = t(core);
     if (out === core) {
       for (const [re, repl] of PATTERNS) {
