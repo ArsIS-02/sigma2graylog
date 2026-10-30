@@ -191,6 +191,34 @@ podman run -d --name sigma2graylog --security-opt label=disable \
   -v /srv/sigma2graylog:/data localhost/sigma2graylog:latest
 ```
 
+### 3.5. Обновление контейнера Podman
+
+Работает и для rootless, и для rootful (`sudo podman …`). Важно: у root и у обычного
+пользователя **отдельные хранилища образов** — образ нужно собирать тем же пользователем,
+под которым запущен контейнер.
+
+```bash
+cd ~/sigma2graylog                    # должен быть клоном: git clone https://github.com/ArsIS-02/sigma2graylog
+git pull
+sudo podman build -t localhost/sigma2graylog:0.81 .     # новый тег на каждое обновление
+
+# переменные окружения старого контейнера — в защищённый файл (на экран не выводятся)
+sudo podman inspect sigma2graylog --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep -E '^(DATA_DIR|GRAYLOG_|APP_|FIELDS_TTL|ALLOW_)' | sudo tee /root/s2g.env >/dev/null
+sudo chmod 600 /root/s2g.env
+
+sudo podman stop sigma2graylog
+sudo podman rename sigma2graylog sigma2graylog-old     # оставляем для отката
+sudo podman run -d --name sigma2graylog --restart unless-stopped \
+  -p 8080:8080 -v /srv/sigma2graylog:/data:Z \
+  --env-file /root/s2g.env localhost/sigma2graylog:0.81
+sudo podman logs --tail 20 sigma2graylog               # ждём «Uvicorn running on http://0.0.0.0:8080»
+```
+
+Откат: `sudo podman rm -f sigma2graylog && sudo podman rename sigma2graylog-old sigma2graylog && sudo podman start sigma2graylog`.
+Каталог данных не удаляйте и не меняйте — в нём пользователи, настройки и ключ сессий.
+Старый контейнер удаляйте только после проверки.
+
 ---
 
 ## 4. Kubernetes / k3s
@@ -289,6 +317,7 @@ caddy run --config deploy/caddy/Caddyfile
 | `DATA_DIR` | нет | `/data` | каталог состояния |
 | `FIELDS_TTL` | нет | `600` | кэш списка полей, секунды |
 | `DEMO_MODE` | нет | выкл | `1` — синтетические данные вместо Graylog |
+| `ALLOW_PRIVATE_URLS` | нет | выкл | `1` — разрешить загрузку правил «По ссылке» с внутренних адресов (свой git, файловый сервер). Без неё такие ссылки блокируются как защита от SSRF |
 
 \* нужен либо `GRAYLOG_TOKEN`, либо пара `GRAYLOG_USER` + `GRAYLOG_PASSWORD`.
 
@@ -375,6 +404,9 @@ curl -s http://localhost:8080/api/status | head -c 300
 |---|---|---|
 | Контейнер сразу перезапускается, в логах `PermissionError: /data` | SELinux не даёт доступ к каталогу | `-v ...:/data:Z` или `--security-opt label=disable` |
 | Пароль в интерфейсе «сбросился» после пересоздания контейнера | `:Z` сменил MCS-категории, `users.json` стал нечитаемым | пересоздать том с `label=disable`, см. [3.4](#34-selinux-и-права-на-data) |
+| `fatal: не найден git репозиторий` при `git pull` | каталог на сервере — копия файлов, а не клон; сборка идёт из старого кода | клонировать заново: `git clone https://github.com/ArsIS-02/sigma2graylog`, собирать из клона |
+| Контейнер не видит собранный образ | образ собран другим пользователем (rootless) — у root своё хранилище | собирать тем же пользователем: `sudo podman build …` для rootful-контейнеров |
+| При загрузке «По ссылке»: «Ссылка ведёт на внутренний адрес» | защита от SSRF блокирует localhost и частные сети | для своего внутреннего источника задать `ALLOW_PRIVATE_URLS=1` |
 | `address already in use` | порт 8080 занят | `-p 8081:8080` |
 | В интерфейсе «Graylog недоступен» | неверный URL или сеть | `GRAYLOG_URL` должен быть доступен **из контейнера**, не только с хоста; проверьте `podman exec` / `docker exec` + `curl` |
 | Ссылка «открыть в Graylog» не работает | `GRAYLOG_PUBLIC_URL` не резолвится с рабочей машины | задать адрес, доступный из браузера |

@@ -193,6 +193,33 @@ podman run -d --name sigma2graylog --security-opt label=disable \
   -v /srv/sigma2graylog:/data localhost/sigma2graylog:latest
 ```
 
+### 3.5. Updating a Podman container
+
+Works for rootless and rootful (`sudo podman …`). Note: root and a regular user have
+**separate image stores**, so build the image as the same user that runs the container.
+
+```bash
+cd ~/sigma2graylog                    # must be a clone: git clone https://github.com/ArsIS-02/sigma2graylog
+git pull
+sudo podman build -t localhost/sigma2graylog:0.81 .     # a new tag for every update
+
+# environment of the old container into a protected file (nothing is printed)
+sudo podman inspect sigma2graylog --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep -E '^(DATA_DIR|GRAYLOG_|APP_|FIELDS_TTL|ALLOW_)' | sudo tee /root/s2g.env >/dev/null
+sudo chmod 600 /root/s2g.env
+
+sudo podman stop sigma2graylog
+sudo podman rename sigma2graylog sigma2graylog-old     # keep it for rollback
+sudo podman run -d --name sigma2graylog --restart unless-stopped \
+  -p 8080:8080 -v /srv/sigma2graylog:/data:Z \
+  --env-file /root/s2g.env localhost/sigma2graylog:0.81
+sudo podman logs --tail 20 sigma2graylog               # wait for "Uvicorn running on http://0.0.0.0:8080"
+```
+
+Rollback: `sudo podman rm -f sigma2graylog && sudo podman rename sigma2graylog-old sigma2graylog && sudo podman start sigma2graylog`.
+Do not delete or change the data directory — it holds users, settings and the session key.
+Remove the old container only after you have checked the new one.
+
 ---
 
 ## 4. Kubernetes / k3s
@@ -289,6 +316,7 @@ caddy run --config deploy/caddy/Caddyfile
 | `DATA_DIR` | no | `/data` | state directory |
 | `FIELDS_TTL` | no | `600` | field list cache, seconds |
 | `DEMO_MODE` | no | off | `1` — synthetic data instead of Graylog |
+| `ALLOW_PRIVATE_URLS` | no | off | `1` — allow loading rules "by link" from internal addresses (your own git, file server). Without it such links are blocked as SSRF protection |
 
 \* either `GRAYLOG_TOKEN` or the `GRAYLOG_USER` + `GRAYLOG_PASSWORD` pair is needed.
 
@@ -375,6 +403,9 @@ Then: open the UI, sign in, **Settings** → "Test connection", and follow the
 |---|---|---|
 | Container restarts immediately, log shows `PermissionError: /data` | SELinux blocks the directory | `-v ...:/data:Z` or `--security-opt label=disable` |
 | UI password "reset" after recreating the container | `:Z` changed the MCS categories, `users.json` became unreadable | recreate the volume with `label=disable`, see [3.4](#34-selinux-and-data-permissions) |
+| `fatal: not a git repository` on `git pull` | the server directory is a copy of the files, not a clone; the build used old code | clone again: `git clone https://github.com/ArsIS-02/sigma2graylog` and build from the clone |
+| Container cannot see the built image | built by another user (rootless) — root has its own store | build as the same user: `sudo podman build …` for rootful containers |
+| Loading "by link" says the link points to an internal address | SSRF protection blocks localhost and private networks | for your own internal source set `ALLOW_PRIVATE_URLS=1` |
 | `address already in use` | port 8080 is taken | `-p 8081:8080` |
 | UI says Graylog is unreachable | wrong URL or network | `GRAYLOG_URL` must be reachable **from the container**, not only from the host; check with `podman exec` / `docker exec` + `curl` |
 | "Open in Graylog" links do not work | `GRAYLOG_PUBLIC_URL` does not resolve from your workstation | set an address your browser can reach |

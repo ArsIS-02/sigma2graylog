@@ -25,8 +25,8 @@
               'The <b>Converter</b> tab. There are four ways to get a rule.'),
       img: 'g2-sources', marks: { ru: [{ x: 3.8, y: 53.0 }], en: [{ x: 3.8, y: 53.0 }] },
       bullets: [
-        S('<b>1</b> — строка загрузки из каталога: «известные источники…» (SigmaHQ: все правила, core, master; ThreatHunting Keywords; SIGMA detection rules), фильтры по продукту и уровню, и кнопка <b>«Загрузить»</b> — качает набор (первый раз ~6 секунд), кэш на сутки.',
-          '<b>1</b> — the catalog row: "known sources…" (SigmaHQ: all rules, core, master; ThreatHunting Keywords; SIGMA detection rules), filters by product and level, and the <b>Load</b> button — downloads the set (~6 seconds the first time), cached for a day.'),
+        S('<b>1</b> — <b>«Библиотека наборов»</b> (SigmaHQ: все правила, core, master; ThreatHunting Keywords; SIGMA detection rules). У набора видны число правил и разбивка по продуктам; <b>«Загрузить»</b> берёт набор целиком, <b>«Загрузить только windows»</b> — один продукт. Фильтры по продукту, уровню и лимиту — в шапке библиотеки, новый набор добавляет <b>«＋ из каталога»</b>. Первая загрузка ~6 секунд, кэш на сутки.',
+          '<b>1</b> — the <b>Rule library</b> (SigmaHQ: all rules, core, master; ThreatHunting Keywords; SIGMA detection rules). Each set shows its rule count and a per-product breakdown; <b>Load</b> takes the whole set, <b>Load only windows</b> a single product. Product, level and limit filters sit in the library header, and <b>＋ from catalog</b> adds a new set. First load takes ~6 seconds, cached for a day.'),
         S('Ещё два пути: <b>«Пример ↻»</b> подставляет случайное правило из встроенных, а <b>«Файлы…» / «Папка…»</b> и drag&amp;drop берут ваши YAML, zip или tar.gz.',
           'Two more ways: <b>Sample ↻</b> inserts a random built-in rule, and <b>Files… / Folder…</b> plus drag&amp;drop take your YAML, zip or tar.gz.'),
       ],
@@ -135,12 +135,14 @@
       'За раз конвертируется до <b>60</b> правил, загружается до <b>300</b>, создаётся до <b>50</b>.',
       'Вкладки доступны по ссылке: <code>#streams</code>, <code>#detect</code>, <code>#settings</code>, <code>#guide</code>.',
       'Регистронезависимость включается в настройках: буквы раскрываются в <code>[Pp]</code>.',
+      'Загрузка «По ссылке» не ходит на внутренние адреса (защита от SSRF); для своего источника задайте <code>ALLOW_PRIVATE_URLS=1</code>.',
       'Фильтры и список полей кэшируются — «Обновить поля» в шапке сбрасывает кэш.',
     ], links: [['#settings', 'Перейти в настройки', 'Open settings'], ['#convert', 'К конвертеру', 'To converter'], ['#streams', 'К стримам', 'To streams']] },
     en: { title: 'Good to know', items: [
       'Up to <b>60</b> rules are converted at once, <b>300</b> loaded, <b>50</b> created.',
       'Tabs are linkable: <code>#streams</code>, <code>#detect</code>, <code>#settings</code>, <code>#guide</code>.',
       'Case-insensitivity is switched in settings: letters expand to <code>[Pp]</code>.',
+      'Loading "by link" does not reach internal addresses (SSRF protection); set <code>ALLOW_PRIVATE_URLS=1</code> for your own source.',
       'Filters and the field list are cached — "Refresh fields" in the header clears the cache.',
     ], links: [['#settings', 'Open settings', 'Open settings'], ['#convert', 'To converter', 'To converter'], ['#streams', 'To streams', 'To streams']] },
   };

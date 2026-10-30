@@ -32,7 +32,7 @@ historical data — before you create a detection.
 | **Duplicate check** | compares a new query with existing event definitions (query tokens + title) |
 | **Detections tab** | browse, search, open and delete existing Graylog event definitions |
 | **Batch mode** | table with filters, bulk creation with a dry-run preview and per-item report |
-| **Rule sources** | built-in catalog of public Sigma sets (SigmaHQ, ThreatHunting Keywords, ...) |
+| **Rule library** | public Sigma sets (SigmaHQ, ThreatHunting Keywords, ...): load a whole set or one product, per-product breakdown |
 | **Extractor generator** | emits a Graylog pipeline rule for a field missing in your stream |
 | **Settings UI** | Graylog URL, token or password, cache TTL, defaults — secrets encrypted at rest |
 | **Built-in guide** | a "Guide" tab: seven annotated steps with animated pointers |
@@ -115,6 +115,7 @@ nginx and Caddy configs, a Kubernetes manifest.
 | `APP_USER` / `APP_PASSWORD` | UI credentials, used **only** to create the first user |
 | `FIELDS_TTL` | field-list cache, seconds (default 600) |
 | `DEMO_MODE` | `1` — synthetic data, no external Graylog |
+| `ALLOW_PRIVATE_URLS` | `1` — allow loading "by link" from internal addresses (blocked by default) |
 
 Values from the Settings tab override environment variables; they are stored in
 `/data/settings.json` with `0600`, secrets encrypted (Fernet, key derived from `/data/secret.key`).
@@ -141,6 +142,10 @@ Verified against Graylog 7.2.1:
 - `field:/.*value.*/` — works; this is what `contains` / `endswith` compile to;
 - regex in Graylog is **case-sensitive**, Sigma is not — enabled by default, letters are expanded
   into character classes (`[Pp]ower[Ss]hell`);
+- inside a value, Sigma's `*` means "any characters" and `?` means "one character": in regex they
+  become `.*` and `.`, while `/`, `"`, `&`, `#`, `~`, `<`, `>` and other Lucene-regex specials are
+  escaped. Quotes and escapes (`\"`, `\ `) are parsed character by character, so values like
+  `say "hi" there` do not break the query and a `*` inside a quoted phrase is left alone;
 - `POST /api/events/definitions` needs the body wrapped in `{"entity": {...}}` with an empty
   `series` array;
 - `DELETE` requires the `X-Requested-By` header.
@@ -162,6 +167,9 @@ Verified against Graylog 7.2.1:
 
 ## Limitations
 
+- Loading rules "by link" is protected against SSRF: localhost, private networks, link-local
+  (cloud metadata) and IPv6 loopback/ULA are blocked, checked again on every redirect, and the
+  download size is capped while streaming. Set `ALLOW_PRIVATE_URLS=1` for your own internal source.
 - Regex is case-insensitive only through character classes, which makes long queries ~4x longer;
   expansion is skipped above 48 characters.
 - A stream's field list comes from a sample of 100 events, so rare fields may be missed.
