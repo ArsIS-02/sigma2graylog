@@ -261,6 +261,292 @@ def sample_at(index: int) -> dict:
     return SAMPLES[index % len(SAMPLES)]
 
 
+
+# --- второй блок примеров: Linux, macOS, сеть, облака, веб ---
+SAMPLES += [
+    {"source": "SigmaHQ / linux/process_creation", "yaml": """title: Base64 Encoded Shell Command
+id: a1c4a8f2-1111-4b31-9e01-111111111111
+status: test
+description: Запуск команды, закодированной в base64, через shell
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection:
+        Image|endswith:
+            - '/bash'
+            - '/sh'
+        CommandLine|contains: 'base64 -d'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / linux/process_creation", "yaml": """title: Curl Piped To Shell
+id: a1c4a8f2-2222-4b31-9e01-222222222222
+status: test
+description: Скачивание и немедленное исполнение скрипта через curl
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection:
+        CommandLine|contains:
+            - 'curl '
+            - 'wget '
+        CommandLine|contains|all:
+            - '|'
+            - 'sh'
+    condition: selection
+level: critical""" },
+    {"source": "SigmaHQ / linux/file_event", "yaml": """title: Cron File Modified
+id: a1c4a8f2-3333-4b31-9e01-333333333333
+status: test
+description: Изменение файлов cron — типичный способ закрепления
+logsource:
+    product: linux
+    category: file_event
+detection:
+    selection:
+        TargetFilename|startswith:
+            - '/etc/cron'
+            - '/var/spool/cron'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / linux/auditd", "yaml": """title: Sudoers File Read
+id: a1c4a8f2-4444-4b31-9e01-444444444444
+status: test
+description: Попытка чтения файла sudoers не-root пользователем
+logsource:
+    product: linux
+    category: file_event
+detection:
+    selection:
+        TargetFilename|startswith: '/etc/sudoers'
+    condition: selection
+level: low""" },
+    {"source": "SigmaHQ / linux/process_creation", "yaml": """title: Suspicious Shell Spawn From Web Server
+id: a1c4a8f2-5555-4b31-9e01-555555555555
+status: test
+description: Веб-сервер породил shell — признак веб-шелла
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    parent:
+        ParentImage|endswith:
+            - '/nginx'
+            - '/httpd'
+            - '/apache2'
+    child:
+        Image|endswith:
+            - '/sh'
+            - '/bash'
+    condition: parent and child
+level: critical""" },
+    {"source": "SigmaHQ / linux/process_creation", "yaml": """title: Chmod SUID Bit Set
+id: a1c4a8f2-6666-4b31-9e01-666666666666
+status: test
+description: Установка SUID-бита — повышение привилегий
+logsource:
+    product: linux
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '/chmod'
+        CommandLine|contains|all:
+            - '4755'
+            - '/tmp/'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / macos/process_creation", "yaml": """title: macOS Gatekeeper Bypass Via Xattr
+id: a1c4a8f2-7777-4b31-9e01-777777777777
+status: test
+description: Снятие карантина с приложения — обход Gatekeeper
+logsource:
+    product: macos
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '/xattr'
+        CommandLine|contains|all:
+            - '-d'
+            - 'com.apple.quarantine'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / macos/process_creation", "yaml": """title: macOS LaunchAgent Persistence
+id: a1c4a8f2-8888-4b31-9e01-888888888888
+status: test
+description: Создание агента автозапуска в LaunchAgents
+logsource:
+    product: macos
+    category: file_event
+detection:
+    selection:
+        TargetFilename|contains: '/Library/LaunchAgents/'
+        TargetFilename|endswith: '.plist'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / windows/process_creation", "yaml": """title: Mshta Executing Remote Script
+id: a1c4a8f2-9999-4b31-9e01-999999999999
+status: test
+description: Запуск удалённого сценария через mshta
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\\mshta.exe'
+        CommandLine|contains:
+            - 'http://'
+            - 'https://'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / windows/process_creation", "yaml": """title: Suspicious WMIC Process Call
+id: a1c4a8f2-aaaa-4b31-9e01-aaaaaaaaaaaa
+status: test
+description: Использование WMIC для запуска процесса — боковое перемещение
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        CommandLine|contains: 'process call create'
+        Image|endswith: '\\wmic.exe'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / windows/process_creation", "yaml": """title: Credential Dump Via Comsvcs.dll
+id: a1c4a8f2-bbbb-4b31-9e01-bbbbbbbbbbbb
+status: test
+description: Дамп памяти lsass через comsvcs.dll MiniDump
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        CommandLine|contains|all:
+            - 'comsvcs'
+            - 'MiniDump'
+    condition: selection
+level: critical""" },
+    {"source": "SigmaHQ / windows/registry_set", "yaml": """title: Defender Exclusion Added
+id: a1c4a8f2-cccc-4b31-9e01-cccccccccccc
+status: test
+description: Добавление исключения в Microsoft Defender
+logsource:
+    product: windows
+    category: registry_set
+detection:
+    selection:
+        TargetObject|contains: '\\Windows Defender\\Exclusions\\Paths\\'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / windows/powershell", "yaml": """title: PowerShell Hidden Window
+id: a1c4a8f2-dddd-4b31-9e01-dddddddddddd
+status: test
+description: Запуск PowerShell со скрытым окном
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\\powershell.exe'
+        CommandLine|contains:
+            - ' -windowstyle hidden'
+            - ' -w hidden'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / network", "yaml": """title: DNS Query To Suspicious TLD
+id: a1c4a8f2-eeee-4b31-9e01-eeeeeeeeeeee
+status: test
+description: Обращение к домену в подозрительной зоне
+logsource:
+    category: dns_query
+detection:
+    selection:
+        QueryName|endswith:
+            - '.top'
+            - '.xyz'
+            - '.click'
+    condition: selection
+level: low""" },
+    {"source": "SigmaHQ / network", "yaml": """title: Multiple Failed SSH Logins
+id: a1c4a8f2-ffff-4b31-9e01-ffffffffffff
+status: test
+description: Серия неуспешных попыток входа по SSH
+logsource:
+    product: linux
+    service: sshd
+detection:
+    selection:
+        message|contains: 'Failed password'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / cloud", "yaml": """title: AWS Root Account Usage
+id: a1c4a8f2-1010-4b31-9e01-101010101010
+status: test
+description: Использование root-учётной записи AWS
+logsource:
+    product: aws
+    service: cloudtrail
+detection:
+    selection:
+        userIdentity.type: Root
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / cloud", "yaml": """title: Azure MFA Disabled For User
+id: a1c4a8f2-2020-4b31-9e01-202020202020
+status: test
+description: Отключение многофакторной аутентификации пользователю
+logsource:
+    product: azure
+    service: auditlogs
+detection:
+    selection:
+        operationName: 'Disable Strong Authentication'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / web", "yaml": """title: Web Shell Access Path
+id: a1c4a8f2-3030-4b31-9e01-303030303030
+status: test
+description: Обращение к типичному пути веб-шелла
+logsource:
+    category: webserver
+detection:
+    selection:
+        cs-uri|contains:
+            - '/shell.php'
+            - '/cmd.jsp'
+            - '/upload.aspx'
+    condition: selection
+level: high""" },
+    {"source": "SigmaHQ / web", "yaml": """title: SQL Injection Attempt
+id: a1c4a8f2-4040-4b31-9e01-404040404040
+status: test
+description: Признаки SQL-инъекции в строке запроса
+logsource:
+    category: webserver
+detection:
+    selection:
+        cs-uri|contains:
+            - 'union select'
+            - "' or '1'='1"
+            - 'information_schema'
+    condition: selection
+level: medium""" },
+    {"source": "SigmaHQ / windows/process_creation", "yaml": """title: Remote Desktop To External Host
+id: a1c4a8f2-5050-4b31-9e01-505050505050
+status: test
+description: Подключение по RDP на внешний адрес
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\\mstsc.exe'
+        CommandLine|contains: ' /v:'
+    condition: selection
+level: low""" },
+]
+
+
 def random_sample(exclude_titles: list[str] | None = None) -> dict:
     """Случайное правило, по возможности не из уже показанных."""
     exclude_titles = exclude_titles or []

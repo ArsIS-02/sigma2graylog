@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import httpx
+import yaml
 
 from .loader import _iter_archive, MAX_TOTAL_BYTES
 
@@ -70,9 +71,34 @@ def _rule_meta(text: str) -> dict:
     }
 
 
+CACHE_VERSION = 2
+
+
 def _split_rules(text: str) -> list[str]:
-    docs = [d.strip() for d in re.split(r"(?m)^---\s*$", text) if d.strip()]
-    return [d for d in docs if re.search(r"(?m)^title:", d)]
+    """Разбирает файл на правила через YAML, а не регуляркой.
+
+    Регулярка по строке '---' рвала документы, если такая строка встречалась
+    внутри блочного описания (description: |) — получались обрывки правил.
+    """
+    out: list[str] = []
+    try:
+        documents = list(yaml.safe_load_all(text))
+    except yaml.YAMLError:
+        return out
+    for doc in documents:
+        if not isinstance(doc, dict) or not doc.get("title"):
+            continue
+        # pySigma принимает category/service/product только строкой
+        logsource = doc.get("logsource") or {}
+        if isinstance(logsource, dict):
+            if any(isinstance(logsource.get(key), (list, dict))
+                   for key in ("category", "service", "product")):
+                continue
+        try:
+            out.append(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False, width=1000))
+        except yaml.YAMLError:
+            continue
+    return out
 
 
 class SourceCache:
@@ -90,6 +116,7 @@ class SourceCache:
             return None
 
     def save(self, source_id: str, payload: dict) -> None:
+        payload = {**payload, "version": CACHE_VERSION}
         self.dir.mkdir(parents=True, exist_ok=True)
         tmp = self.path(source_id).with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, ensure_ascii=False), "utf-8")
@@ -134,8 +161,15 @@ class SourceCache:
             return False
 
     def rules(self, source_id: str) -> list[dict]:
+        """Правила набора; пусто, если набор скачан старой версией парсера."""
         data = self.load(source_id)
-        return (data or {}).get("rules", [])
+        if not data or data.get("version") != CACHE_VERSION:
+            return []
+        return data.get("rules", [])
+
+    def stale(self, source_id: str) -> bool:
+        data = self.load(source_id)
+        return bool(data) and data.get("version") != CACHE_VERSION
 
     def info(self) -> dict[str, dict]:
         out = {}

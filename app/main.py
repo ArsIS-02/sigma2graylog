@@ -612,6 +612,16 @@ def library_preview(source_id: str, product: str = "", limit: int = 300):
 def library_load(source_id: str, req: LibraryLoadRequest):
     """Загрузить набор из библиотеки в конвертер — без повторного скачивания."""
     rules = source_cache.rules(source_id)
+    if not rules and source_cache.stale(source_id):
+        # набор скачан старой версией парсера — перечитываем источник
+        source = next((s for s in sources_mod.SOURCES if s["id"] == source_id), None)
+        if source:
+            try:
+                rules = sources_mod.build_rules(source)
+                source_cache.save(source_id, {"fetched_at": time.time(), "rules": rules})
+            except Exception as exc:  # noqa: BLE001 - сеть
+                raise HTTPException(status_code=409,
+                                    detail=f"Набор устарел, обновите его из каталога: {exc}") from exc
     if not rules:
         raise HTTPException(status_code=404, detail="Набор не найден в библиотеке")
     picked = sources_mod.filter_rules(rules, req.product, None, req.level, None, req.limit)

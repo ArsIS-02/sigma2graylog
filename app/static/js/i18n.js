@@ -290,6 +290,11 @@
     'загружаю список правил…': 'loading rule list…',
     'не удалось прочитать библиотеку: ': 'could not read the library: ',
     'правил': 'rules',
+    'загружаю…': 'loading…',
+    'загружено': 'loaded',
+    'ошибка': 'error',
+    'Загрузить только ': 'Load only ',
+    ' — загрузить': ' — load',
     // --- служебное ---
     'Секреты': 'Secrets',
     'sigma2graylog — на главную': 'sigma2graylog — home',
