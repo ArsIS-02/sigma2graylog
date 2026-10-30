@@ -624,7 +624,8 @@ def library_load(source_id: str, req: LibraryLoadRequest):
                                     detail=f"Набор устарел, обновите его из каталога: {exc}") from exc
     if not rules:
         raise HTTPException(status_code=404, detail="Набор не найден в библиотеке")
-    picked = sources_mod.filter_rules(rules, req.product, None, req.level, None, req.limit)
+    matched_all = sources_mod.filter_rules(rules, req.product, None, req.level, None, 300)
+    picked = matched_all[: max(1, min(req.limit, 300))]
     if not picked:
         raise HTTPException(status_code=404, detail="Под указанные фильтры правил не нашлось")
     return {
@@ -632,7 +633,7 @@ def library_load(source_id: str, req: LibraryLoadRequest):
         "sigma": "\n---\n".join(r["text"] for r in picked),
         "rule_count": len(picked),
         "total_available": len(rules),
-        "matched": len(picked),
+        "matched": len(matched_all),
         "titles": [r["title"] for r in picked[:30]],
         "cached": True,
     }

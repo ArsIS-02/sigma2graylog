@@ -277,10 +277,11 @@
         <div class="row" style="padding:6px 10px 10px">
           <select id="src-product" style="max-width:120px"><option value="">продукт</option></select>
           <select id="src-level" style="max-width:110px"><option value="">уровень</option></select>
-          <select id="src-limit" style="max-width:84px">
-            <option value="25">25</option>
+          <select id="src-limit" style="max-width:96px" title="Сколько правил загрузить за раз">
             <option value="50" selected>50</option>
             <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="300">300 — макс.</option>
           </select>
           <button class="ghost" id="src-load">Скачать</button>
         </div>
@@ -1264,10 +1265,15 @@ document.addEventListener('click', async (ev) => {
       applyLoaded(payload, 'библиотека: ' + id);
       if (status) {
         status.className = 'lib-status done';
-        status.textContent = `загружено ${payload.rule_count}`;
+        const total = payload.matched || payload.total_available || payload.rule_count;
+        status.textContent = total > payload.rule_count
+          ? `загружено ${payload.rule_count} из ${total}`
+          : `загружено ${payload.rule_count}`;
       }
-      $('#left-hint').textContent =
-        `${id}${product ? ' · ' + product : ''}: загружено ${payload.rule_count} правил из библиотеки`;
+      const total = payload.matched || payload.total_available || payload.rule_count;
+      $('#left-hint').textContent = `${id}${product ? ' · ' + product : ''}: загружено ` +
+        `${payload.rule_count}${total > payload.rule_count ? ' из ' + total : ''} правил ` +
+        `(лимит ${$('#src-limit').value}; конвертация идёт пачками до 60)`;
     } catch (e) {
       if (status) { status.className = 'lib-status'; status.textContent = 'ошибка'; }
       $('#left-hint').textContent = 'ошибка библиотеки: ' + e.message;
