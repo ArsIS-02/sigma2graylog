@@ -6,9 +6,9 @@ import re
 import time
 from pathlib import Path
 
-import httpx
 import yaml
 
+from . import netguard
 from .loader import _iter_archive, MAX_TOTAL_BYTES
 
 CACHE_TTL = 24 * 3600
@@ -184,13 +184,7 @@ class SourceCache:
 
 
 def download(url: str) -> bytes:
-    with httpx.Client(follow_redirects=True, timeout=URL_TIMEOUT,
-                      headers={"User-Agent": "sigma2graylog/1.0"}) as client:
-        response = client.get(url)
-        response.raise_for_status()
-        data = response.content
-    if len(data) > MAX_TOTAL_BYTES:
-        raise ValueError("Источник слишком большой")
+    data = netguard.fetch(url, MAX_TOTAL_BYTES, URL_TIMEOUT)
     if len(data) < 100:
         raise ValueError("Источник вернул пустой ответ")
     return data

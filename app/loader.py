@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 import httpx
 from sigma.collection import SigmaCollection
 
+from . import netguard
+
 MAX_FILE_BYTES = 8 * 1024 * 1024        # один файл
 MAX_TOTAL_BYTES = 64 * 1024 * 1024      # распакованный архив целиком
 MAX_FILES = 3000                        # файлов внутри архива/папки
@@ -163,15 +165,11 @@ def from_url(url: str) -> dict:
         raise ValueError("Нужна ссылка http(s)://")
     result = LoadResult()
     try:
-        with httpx.Client(follow_redirects=True, timeout=URL_TIMEOUT,
-                          headers={"User-Agent": "sigma2graylog/1.0"}) as client:
-            response = client.get(url)
-            response.raise_for_status()
+        data = netguard.fetch(url, MAX_TOTAL_BYTES, URL_TIMEOUT)
+    except netguard.UnsafeURL as exc:
+        raise ValueError(str(exc)) from exc
     except httpx.HTTPError as exc:
         raise ValueError(f"Не удалось скачать: {exc}") from exc
-    data = response.content
-    if len(data) > MAX_TOTAL_BYTES:
-        raise ValueError("Файл по ссылке слишком большой")
     name = url.split("?")[0].rstrip("/").split("/")[-1] or "rules.yaml"
     if _looks_like_archive(name, data):
         files = _iter_archive(name, data)

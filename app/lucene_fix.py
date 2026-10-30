@@ -13,17 +13,38 @@ from __future__ import annotations
 
 import re
 
-# Метасимволы, которые pySigma не экранирует, а в regex они значимы.
-_REGEX_SPECIAL = set(".+?()[]{}^$|")
+# Метасимволы, которые pySigma не экранирует, а в regex (Lucene/OpenSearch, флаги ALL) значимы.
+_REGEX_SPECIAL = set(".+()[]{}^$|/#@&<>~\"")
 
-# field:*value* | field:"*value with spaces*" | field:*value
-_FIELD_TERM = re.compile(r'(?P<pre>[A-Za-z0-9_.\-]+:)(?P<term>"\*[^"]*"|\*[^\s()"]*)')
-# то же, но без префикса поля: (*value* ...)
-_BARE_TERM = re.compile(r'(?P<pre>^|[\s(])(?P<term>\*[^\s()"]+)')
+_FIELD_RE = re.compile(r"[A-Za-z0-9_.\-]+:")
+
+
+def _term_end(q: str, i: int) -> int:
+    """Конец терма, начинающегося в позиции i: "..." с учётом \\X либо токен до пробела/скобки."""
+    n = len(q)
+    if i < n and q[i] == '"':
+        j = i + 1
+        while j < n:
+            if q[j] == "\\":
+                j += 2
+                continue
+            if q[j] == '"':
+                return j + 1
+            j += 1
+        return n  # незакрытая кавычка — отдаём остаток как есть
+    j = i
+    while j < n:
+        if q[j] == "\\":
+            j += 2
+            continue
+        if q[j].isspace() or q[j] in "()":
+            break
+        j += 1
+    return min(j, n)
 
 
 def _escape_for_regex(value: str) -> str:
-    """Экранирует значение так, чтобы оно совпало буквально, сохраняя готовые \\X."""
+    """Значение Sigma/Lucene -> regex: \\X сохраняем, * -> .*, ? -> ., прочие метасимволы экранируем."""
     out: list[str] = []
     i = 0
     while i < len(value):
@@ -32,7 +53,14 @@ def _escape_for_regex(value: str) -> str:
             out.append(value[i:i + 2])
             i += 2
             continue
-        out.append("\\" + ch if ch in _REGEX_SPECIAL else ch)
+        if ch == "*":
+            out.append(".*")
+        elif ch == "?":
+            out.append(".")
+        elif ch in _REGEX_SPECIAL:
+            out.append("\\" + ch)
+        else:
+            out.append(ch)
         i += 1
     return "".join(out)
 
@@ -74,14 +102,36 @@ def _term_to_regex(term: str, case_insensitive: bool = False) -> str:
 
 
 def fix_query(query: str, case_insensitive: bool = False) -> str:
-    """Переписывает leading-wildcard термы в regex, не трогая остальное."""
+    """Переписывает leading-wildcard термы в regex, не трогая остальное.
 
-    def repl(m: re.Match) -> str:
-        return m.group("pre") + _term_to_regex(m.group("term"), case_insensitive)
-
-    query = _FIELD_TERM.sub(repl, query)
-    query = _BARE_TERM.sub(repl, query)
-    return query
+    Разбор посимвольный: кавычки и экранирование учитываются, поэтому `*` внутри
+    фразы "..." и значения вида `\\ ` или `\\"` не ломают запрос.
+    """
+    out: list[str] = []
+    i, n = 0, len(query)
+    while i < n:
+        ch = query[i]
+        if ch == "\\":
+            out.append(query[i:i + 2])
+            i += 2
+            continue
+        if ch == '"':  # самостоятельная фраза — не трогаем целиком
+            j = _term_end(query, i)
+            out.append(query[i:j])
+            i = j
+            continue
+        at_start = i == 0 or query[i - 1].isspace() or query[i - 1] == "("
+        if at_start:
+            m = _FIELD_RE.match(query, i)
+            k = m.end() if m else i
+            if (m or ch == "*") and k < n and query[k] in '*"':
+                j = _term_end(query, k)
+                out.append(query[i:k] + _term_to_regex(query[k:j], case_insensitive))
+                i = j
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
 
 
 def describe_codes(query: str, case_insensitive: bool = False) -> list[str]:
