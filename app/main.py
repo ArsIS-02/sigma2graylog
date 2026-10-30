@@ -260,6 +260,8 @@ class ConvertRequest(BaseModel):
     probe: bool = False
     probe_range_seconds: int = 86400
     check_duplicates: bool | None = None
+    # продукт из фильтра источника: используется, если в правиле нет logsource.product
+    default_product: str | None = None
 
 
 class SettingsPatch(BaseModel):
@@ -273,6 +275,8 @@ class SettingsPatch(BaseModel):
     default_stream_id: str | None = None
     default_range: int | None = None
     check_duplicates: bool | None = None
+    # продукт из фильтра источника: используется, если в правиле нет logsource.product
+    default_product: str | None = None
     case_insensitive_regex: bool | None = None
 
 
@@ -438,7 +442,8 @@ def convert(req: ConvertRequest, request: Request):
 
         result = converter.convert(req.sigma, mapping_for, overrides,
                                    case_insensitive=cfg["case_insensitive_regex"],
-                                   lang=request_lang(request))
+                                   lang=request_lang(request),
+                                   default_product=req.default_product)
         want_dupes = req.check_duplicates
         if want_dupes is None:
             want_dupes = cfg["check_duplicates"]

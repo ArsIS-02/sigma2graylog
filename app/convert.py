@@ -59,6 +59,36 @@ def product_of(rule) -> str | None:
     return getattr(rule.logsource, "product", None)
 
 
+# признаки продукта в именах полей правила
+_PRODUCT_HINTS = {
+    "windows": ("image", "commandline", "parentimage", "eventid", "targetfilename",
+                "win_", "integritylevel", "hashes"),
+    "linux": ("audit_type", "proctitle", "syscall", "exe", "cwd", "comm", "exe_path",
+              "auditd_", "key", "syslog_hostname"),
+    "macos": ("macos_", "es_event", "process_executable"),
+}
+
+
+def infer_product(fields: list[str]) -> str | None:
+    """Продукт по полям правила — для правил без logsource.product.
+
+    Linux-поля (proctitle, syscall, exe, cwd, audit_type) для Windows не встречаются,
+    поэтому одного совпадения достаточно, чтобы отнести правило к Linux.
+    """
+    low = [f.lower() for f in fields]
+    scores = {p: 0 for p in _PRODUCT_HINTS}
+    for field in low:
+        for product, hints in _PRODUCT_HINTS.items():
+            if field in hints or any(field.startswith(h) for h in hints if h.endswith("_")):
+                scores[product] += 1
+    # exe/name/cwd в Windows тоже бывают, но в связке с syscall/proctitle/audit_type — только Linux
+    linux_strong = any(f in ("proctitle", "syscall", "audit_type", "auditd_type") for f in low)
+    if linux_strong:
+        scores["linux"] += 3
+    best = max(scores, key=lambda k: scores[k])
+    return best if scores[best] >= 3 else None
+
+
 def _warnings(rule, mapping: dict, queries: list[str], meta: dict | None = None,
               case_insensitive: bool = False, lang: str = "ru") -> list[dict]:
     out: list[dict] = []
@@ -165,7 +195,8 @@ class ConvertedRule:
 
 
 def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = None,
-            max_rules: int = 60, case_insensitive: bool = False, lang: str = "ru") -> dict:
+            max_rules: int = 60, case_insensitive: bool = False, lang: str = "ru",
+            default_product: str | None = None) -> dict:
     """mapping_for(product, fields) -> dict (см. mapping.build_mapping)."""
     try:
         collection = SigmaCollection.from_yaml(sigma_text)
@@ -178,7 +209,10 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
     truncated_rules = len(collection.rules) > max_rules
     for idx, rule in enumerate(collection.rules[:max_rules]):
         fields = sorted(rule_fields(rule))
-        mapping = mapping_for(product_of(rule), fields, overrides or {})
+        # продукт: из правила -> из фильтра источника -> из полей правила
+        product = product_of(rule) or (default_product or None) or infer_product(fields)
+        product_source = "rule" if product_of(rule) else ("filter" if default_product else "inferred")
+        mapping = mapping_for(product, fields, overrides or {})
         meta = mapping.pop("__meta__", {})
         enabled = {
             f: m["graylog_field"]
@@ -197,6 +231,10 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
             all_fields[f] = mapping[f]
 
         warnings = _warnings(rule, mapping, queries, meta, case_insensitive, lang)
+        if not product_of(rule) and product:
+            warnings.append({"level": "info", "code": "product_from_hint",
+                             "message": tr(lang, "product_from_hint", product=product,
+                                           source=product_source)})
         if err:
             warnings.insert(0, {"level": "error", "code": "backend_error",
                                 "message": tr(lang, "convert_error", error=err)})
@@ -205,7 +243,7 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
             title=getattr(rule, "title", "") or f"rule-{idx}",
             rule_id=str(rule.id) if getattr(rule, "id", None) else None,
             level=str(rule.level) if getattr(rule, "level", None) else None,
-            product=product_of(rule),
+            product=product,
             category=getattr(rule.logsource, "category", None),
             queries=queries,
             fields=fields,

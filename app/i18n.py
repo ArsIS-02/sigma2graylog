@@ -57,6 +57,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ru": "contains/endswith переведены в regex: Graylog не принимает незакавыченный leading wildcard. Regex в Graylog регистрозависимый.",
         "en": "contains/endswith converted to regex: Graylog rejects an unquoted leading wildcard. Regex in Graylog is case-sensitive.",
     },
+    "product_from_hint": {
+        "ru": "В правиле нет logsource.product — продукт определён как «{product}» ({source}) и поля сопоставлены по его стриму.",
+        "en": "The rule has no logsource.product — product resolved as \"{product}\" ({source}) and fields are mapped against its stream.",
+    },
     "case_insensitive": {
         "ru": "contains/endswith переведены в regex без учёта регистра (символьные классы, как в Sigma) — запрос длиннее, но точнее.",
         "en": "contains/endswith converted to case-insensitive regex (character classes, as in Sigma) — longer query, but more precise.",

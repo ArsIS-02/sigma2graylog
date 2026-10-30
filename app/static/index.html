@@ -913,6 +913,8 @@ async function doConvert() {
         sigma,
         overrides: state.overrides,
         stream_id: $('#stream').value || null,
+        // если правило без logsource.product — берём продукт из фильтра источника
+        default_product: $('#src-product') && $('#src-product').value ? $('#src-product').value : null,
       }),
     });
     state.result = data;
