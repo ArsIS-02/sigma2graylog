@@ -1718,7 +1718,8 @@ window.addEventListener('hashchange', () => routeHash(location.hash.slice(1)));
 
 async function demoAutoFill() {
   try {
-    const s = await api('/api/samples/random');
+    const fixed = new URLSearchParams(location.search).get('sample');
+    const s = await api('/api/samples/random' + (fixed !== null ? `?index=${encodeURIComponent(fixed)}` : ''));
     $('#sigma').value = s.yaml;
     setSource('демо: ' + s.title);
     await doConvert();

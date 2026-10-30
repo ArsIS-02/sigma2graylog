@@ -46,27 +46,14 @@ STEPS = {
             {"label": "1", "band_y": (300, 466), "band": (24, 950)},
             {"label": "2", "band_y": (466, 516), "band": (24, 580)},
         ],
-        "en": {"crop": (700, 92, 1660, 478),
-               "marks": [
-                   {"label": "1", "band_y": (300, 404), "band": (24, 950)},
-                   {"label": "2", "band_y": (410, 456), "band": (24, 580)},
-               ]},
     },
     "g4-mapping": {
-        "source": "01-converter.png", "crop": (700, 548, 1660, 742),
-        "marks": [
-            {"label": "1", "band_y": (614, 742), "band": (180, 940)},
-        ],
-        "en": {"crop": (700, 556, 1660, 716),
-               "marks": [{"label": "1", "band_y": (600, 712), "band": (180, 940)}]},
+        "source": "01-converter.png", "crop": (700, 545, 1660, 800),
+        "marks": [{"label": "1", "band_y": (600, 792), "band": (180, 940)}],
     },
     "g5-history": {
-        "source": "05-history.png", "crop": (700, 425, 1660, 745),
-        "marks": [
-            {"label": "1", "probe": (765, 425, 700, (17, 24, 40)), "band": (20, 950)},
-        ],
-        "en": {"crop": (700, 425, 1660, 800),
-               "marks": [{"label": "1", "band_y": (433, 560), "band": (20, 950)}]},
+        "source": "05-history.png", "crop": (700, 425, 1660, 770),
+        "marks": [{"label": "1", "band_y": (466, 586), "band": (20, 950)}],
     },
     "g6-streams": {
         "source": "02-streams.png", "crop": (10, 60, 1670, 880),

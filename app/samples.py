@@ -256,6 +256,11 @@ level: medium"""
 ]
 
 
+def sample_at(index: int) -> dict:
+    """Правило по индексу — нужен для воспроизводимых скриншотов и демонстраций."""
+    return SAMPLES[index % len(SAMPLES)]
+
+
 def random_sample(exclude_titles: list[str] | None = None) -> dict:
     """Случайное правило, по возможности не из уже показанных."""
     exclude_titles = exclude_titles or []

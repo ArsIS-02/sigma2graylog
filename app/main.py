@@ -576,8 +576,10 @@ class UrlRequest(BaseModel):
 
 
 @app.get("/api/samples/random", dependencies=[Depends(current_user)])
-def sample(exclude: str = ""):
-    """Случайное правило из встроенной коллекции."""
+def sample(exclude: str = "", index: int | None = None):
+    """Правило из встроенной коллекции: случайное или с фиксированным номером."""
+    if index is not None:
+        return samples.sample_at(index)
     exclude_titles = [t for t in exclude.split("|") if t.strip()] if exclude else []
     return samples.random_sample(exclude_titles)
 
