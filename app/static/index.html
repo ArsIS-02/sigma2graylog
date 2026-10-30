@@ -264,23 +264,28 @@
     <div class="lib" id="lib">
       <div class="lib-head">
         <span>Библиотека наборов</span>
+        <button class="ghost" id="lib-add-toggle" title="Скачать новый набор из каталога">＋ из каталога</button>
         <button class="ghost" id="lib-refresh" title="Обновить список">⟳</button>
       </div>
       <div class="progress" id="lib-progress" hidden><i></i></div>
+      <div id="lib-add" hidden>
+        <div class="row" style="padding:8px 10px 0">
+          <select id="src-id" style="flex:1;min-width:150px">
+            <option value="">выберите набор в каталоге…</option>
+          </select>
+        </div>
+        <div class="row" style="padding:6px 10px 10px">
+          <select id="src-product" style="max-width:120px"><option value="">продукт</option></select>
+          <select id="src-level" style="max-width:110px"><option value="">уровень</option></select>
+          <select id="src-limit" style="max-width:84px">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+          <button class="ghost" id="src-load">Скачать</button>
+        </div>
+      </div>
       <div id="lib-list" class="lib-list"><div class="lib-empty">Пока пусто — скачайте набор из каталога.</div></div>
-    </div>
-    <div class="row">
-      <select id="src-id" style="flex:1;min-width:170px">
-        <option value="">известные источники…</option>
-      </select>
-      <select id="src-product" style="max-width:130px"><option value="">продукт</option></select>
-      <select id="src-level" style="max-width:120px"><option value="">уровень</option></select>
-      <select id="src-limit" style="max-width:90px">
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-      </select>
-      <button class="ghost" id="src-load">Загрузить</button>
     </div>
     <div class="row">
       <input type="file" id="file-input" multiple accept=".yml,.yaml,.zip,.tar,.gz,.tgz,.bz2,.xz" style="display:none">
@@ -1124,11 +1129,22 @@ $('#btn-sample').onclick = async () => {
   }
 };
 
+// стандартные продукты и уровни Sigma: доступны сразу, до скачивания набора
+const SIGMA_PRODUCTS = ['windows', 'linux', 'macos', 'aws', 'azure', 'gcp', 'm365',
+                        'okta', 'kubernetes', 'network', 'dns', 'webserver', 'proxy',
+                        'firewall', 'antivirus', 'database'];
+const SIGMA_LEVELS = ['informational', 'low', 'medium', 'high', 'critical'];
+
+function fillStandardFacets() {
+  fillFacet('#src-product', SIGMA_PRODUCTS, 'продукт');
+  fillFacet('#src-level', SIGMA_LEVELS, 'уровень');
+}
+
 async function loadSourceList() {
   try {
     const d = await api('/api/sources');
     const sel = $('#src-id');
-    sel.innerHTML = '<option value="">известные источники…</option>';
+    sel.innerHTML = '<option value="">выберите набор в каталоге…</option>';
     d.sources.forEach(src => {
       const o = document.createElement('option');
       o.value = src.id;
@@ -1137,6 +1153,7 @@ async function loadSourceList() {
       sel.appendChild(o);
     });
   } catch (e) { /* не критично */ }
+  fillStandardFacets();
 }
 
 function fillFacet(select, values, placeholder) {
@@ -1261,6 +1278,25 @@ document.addEventListener('click', async (ev) => {
   }
 });
 
+// выбор источника: если набор уже в библиотеке, показываем реальные продукты и уровни
+if ($('#src-id')) $('#src-id').addEventListener('change', async () => {
+  const id = $('#src-id').value;
+  fillStandardFacets();
+  if (!id) return;
+  try {
+    const data = await api(`/api/library/${encodeURIComponent(id)}/preview?limit=1`);
+    const products = Object.keys(data.groups || {});
+    if (products.length) fillFacet('#src-product', products.sort(), 'продукт');
+  } catch (e) { /* набора ещё нет в библиотеке — остаются стандартные значения */ }
+});
+
+if ($('#lib-add-toggle')) $('#lib-add-toggle').onclick = () => {
+  const panel = $('#lib-add');
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) $('#src-load').disabled = false;
+};
+
 if ($('#lib-refresh')) $('#lib-refresh').onclick = () => loadLibrary();
 loadLibrary();
 
@@ -1276,19 +1312,31 @@ $('#src-load').onclick = async () => {
   const id = $('#src-id').value;
   if (!id) { $('#left-hint').textContent = 'Выберите источник правил'; return; }
   $('#src-load').disabled = true;
-  $('#src-load').textContent = 'Скачиваю…';
-  $('#left-hint').textContent = 'скачиваю источник (первый раз ~5–15 секунд)…';
+  $('#src-load').textContent = 'Загружаю…';
+  $('#left-hint').textContent = 'читаю набор…';
+  const filters = {
+    product: $('#src-product').value || null,
+    level: $('#src-level').value || null,
+    limit: +$('#src-limit').value || 50,
+  };
   try {
-    const payload = await api('/api/sources/' + encodeURIComponent(id) + '/fetch', {
-      method: 'POST',
-      body: JSON.stringify({
-        product: $('#src-product').value || null,
-        level: $('#src-level').value || null,
-        limit: +$('#src-limit').value || 50,
-      }),
-    });
+    let payload;
+    try {
+      // набор уже скачан — берём из библиотеки, без повторной загрузки
+      payload = await api('/api/library/' + encodeURIComponent(id) + '/load', {
+        method: 'POST', body: JSON.stringify(filters),
+      });
+      payload.cached = true;
+    } catch (e) {
+      if (!/не найден|404/i.test(e.message)) throw e;
+      $('#left-hint').textContent = 'скачиваю набор (первый раз ~5–15 секунд)…';
+      payload = await api('/api/sources/' + encodeURIComponent(id) + '/fetch', {
+        method: 'POST', body: JSON.stringify(filters),
+      });
+    }
     applyLoaded(payload, 'источник: ' + payload.source.name);
     loadLibrary();
+    if ($('#lib-add')) $('#lib-add').hidden = true;
     $('#left-hint').textContent =
       `${payload.source.name}: загружено ${payload.rule_count} правил ` +
       `(под фильтр подошло ${payload.matched} из ${payload.total_available})` +
