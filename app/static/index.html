@@ -22,6 +22,23 @@
   [hidden]{display:none !important}
   body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;row-gap:8px;position:relative;z-index:40}
+  .lib{margin-bottom:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden}
+  .lib-head{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:12px;font-weight:600;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .lib-head .ghost{margin-left:auto;padding:2px 8px;font-size:12px}
+  .lib-list{max-height:230px;overflow:auto}
+  .lib-empty,.lib-note{padding:8px 10px;font-size:12px;color:var(--muted)}
+  .lib-item{border-top:1px solid var(--line)}
+  .lib-row{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:13px}
+  .lib-row:hover{background:rgba(79,140,255,.06)}
+  .lib-toggle{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:12px;width:14px;padding:0}
+  .lib-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46%}
+  .lib-meta{font-size:11px;color:var(--muted);white-space:nowrap}
+  .lib-row .ghost{padding:3px 8px;font-size:11px}
+  .lib-body{padding:4px 10px 10px 32px;font-size:12px;color:#c9d4ea}
+  .lib-group{margin:6px 0 2px;color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+  .lib-rule{padding:2px 0;display:flex;gap:8px;align-items:baseline}
+  .lib-rule .lv{font-size:10px;color:var(--muted);white-space:nowrap}
   .lang-switch{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:0 0 auto}
   .lang-switch button{background:transparent;border:0;color:var(--muted);font-size:12px;font-weight:600;
     padding:5px 9px;cursor:pointer}
@@ -232,6 +249,13 @@
       <button class="ghost" id="btn-clear">Очистить</button>
       <span class="spacer"></span>
       <span class="badge" id="src-badge" style="display:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    </div>
+    <div class="lib" id="lib">
+      <div class="lib-head">
+        <span>Библиотека наборов</span>
+        <button class="ghost" id="lib-refresh" title="Обновить список">⟳</button>
+      </div>
+      <div id="lib-list" class="lib-list"><div class="lib-empty">Пока пусто — скачайте набор из каталога.</div></div>
     </div>
     <div class="row">
       <select id="src-id" style="flex:1;min-width:170px">
@@ -1113,6 +1137,108 @@ function fillFacet(select, values, placeholder) {
   sel.value = current;
 }
 
+// ------------------------------------------------------------------ библиотека наборов
+async function loadLibrary() {
+  const box = $('#lib-list');
+  if (!box) return;
+  try {
+    const data = await api('/api/library');
+    const items = data.items || [];
+    if (!items.length) {
+      box.innerHTML = '<div class="lib-empty">Пока пусто — скачайте набор из каталога.</div>';
+      return;
+    }
+    box.innerHTML = items.map((it) => {
+      const date = it.fetched_at ? new Date(it.fetched_at * 1000).toLocaleDateString() : '';
+      const products = Object.entries(it.products || {}).slice(0, 3)
+        .map(([p, n]) => `${esc(p)} ${n}`).join(' · ');
+      return `<div class="lib-item" data-lib="${esc(it.id)}">
+        <div class="lib-row">
+          <button class="lib-toggle" data-lib-toggle="${esc(it.id)}" title="Развернуть">▸</button>
+          <span class="lib-name" title="${esc(it.name)}">${esc(it.name)}</span>
+          <span class="lib-meta">${it.count} правил${date ? ' · ' + date : ''}</span>
+          <span class="spacer"></span>
+          <button class="ghost" data-lib-load="${esc(it.id)}">Загрузить</button>
+          <button class="ghost" data-lib-del="${esc(it.id)}" title="Удалить из библиотеки">✕</button>
+        </div>
+        <div class="lib-body" data-lib-body="${esc(it.id)}" hidden>
+          <div class="lib-note">${products || '—'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = `<div class="lib-empty">не удалось прочитать библиотеку: ${esc(e.message)}</div>`;
+  }
+}
+
+async function toggleLibraryItem(id) {
+  const body = document.querySelector(`[data-lib-body="${id}"]`);
+  const toggle = document.querySelector(`[data-lib-toggle="${id}"]`);
+  if (!body) return;
+  if (!body.hidden) { body.hidden = true; if (toggle) toggle.textContent = '▸'; return; }
+  body.hidden = false;
+  if (toggle) toggle.textContent = '▾';
+  if (body.dataset.filled) return;
+  body.innerHTML = '<div class="lib-note">загружаю список правил…</div>';
+  try {
+    const data = await api(`/api/library/${encodeURIComponent(id)}/preview?limit=300`);
+    const groups = Object.entries(data.groups || {});
+    body.innerHTML = groups.map(([product, rules]) => `
+      <div class="lib-group">${esc(product)} · ${rules.length}</div>
+      ${rules.slice(0, 40).map((r) => `<div class="lib-rule">
+        <span class="lv">${esc((r.level || '').toUpperCase() || '—')}</span>
+        <span>${esc(r.title || '')}</span></div>`).join('')}
+      ${rules.length > 40 ? `<div class="lib-note">… и ещё ${rules.length - 40}</div>` : ''}
+    `).join('');
+    body.dataset.filled = '1';
+  } catch (e) {
+    body.innerHTML = `<div class="lib-note">ошибка: ${esc(e.message)}</div>`;
+  }
+}
+
+document.addEventListener('click', async (ev) => {
+  const toggle = ev.target.closest('[data-lib-toggle]');
+  if (toggle) { toggleLibraryItem(toggle.dataset.libToggle); return; }
+  const del = ev.target.closest('[data-lib-del]');
+  if (del) {
+    const id = del.dataset.libDel;
+    if (!confirm(T('Удалить набор «') + id + T('» из библиотеки?'))) return;
+    try { await api(`/api/library/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
+    catch (e) { alert(T('Не удалось удалить: ') + e.message); }
+    loadLibrary();
+    return;
+  }
+  const load = ev.target.closest('[data-lib-load]');
+  if (load) {
+    const id = load.dataset.libLoad;
+    try {
+      const payload = await api(`/api/library/${encodeURIComponent(id)}/load`, {
+        method: 'POST',
+        body: JSON.stringify({
+          product: $('#src-product').value || null,
+          level: $('#src-level').value || null,
+          limit: +$('#src-limit').value || 50,
+        }),
+      });
+      applyLoaded(payload, 'библиотека: ' + id);
+      $('#left-hint').textContent = `${id}: загружено ${payload.rule_count} правил из библиотеки`;
+    } catch (e) {
+      $('#left-hint').textContent = 'ошибка библиотеки: ' + e.message;
+    }
+  }
+});
+
+if ($('#lib-refresh')) $('#lib-refresh').onclick = () => loadLibrary();
+loadLibrary();
+
+// фильтры применяются сразу, без повторного нажатия «Загрузить»
+['#src-product', '#src-level', '#src-limit'].forEach((sel) => {
+  const el = $(sel);
+  if (el) el.addEventListener('change', () => {
+    if ($('#src-id') && $('#src-id').value) $('#src-load').click();
+  });
+});
+
 $('#src-load').onclick = async () => {
   const id = $('#src-id').value;
   if (!id) { $('#left-hint').textContent = 'Выберите источник правил'; return; }
@@ -1129,6 +1255,7 @@ $('#src-load').onclick = async () => {
       }),
     });
     applyLoaded(payload, 'источник: ' + payload.source.name);
+    loadLibrary();
     $('#left-hint').textContent =
       `${payload.source.name}: загружено ${payload.rule_count} правил ` +
       `(под фильтр подошло ${payload.matched} из ${payload.total_available})` +

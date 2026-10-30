@@ -101,6 +101,42 @@ class SourceCache:
             return data
         return None
 
+    def listing(self) -> list[dict]:
+        """Скачанные наборы, доступные в библиотеке (независимо от TTL)."""
+        out = []
+        names = {src["id"]: src["name"] for src in SOURCES}
+        for path in sorted(self.dir.glob("*.json")):
+            data = self.load(path.stem)
+            if not data or not data.get("rules"):
+                continue
+            products: dict[str, int] = {}
+            levels: dict[str, int] = {}
+            for rule in data["rules"]:
+                prod = rule.get("product") or "—"
+                products[prod] = products.get(prod, 0) + 1
+                lvl = rule.get("level") or "—"
+                levels[lvl] = levels.get(lvl, 0) + 1
+            out.append({
+                "id": path.stem,
+                "name": names.get(path.stem, path.stem),
+                "count": len(data["rules"]),
+                "fetched_at": data.get("fetched_at", 0),
+                "products": dict(sorted(products.items(), key=lambda kv: -kv[1])),
+                "levels": dict(sorted(levels.items(), key=lambda kv: -kv[1])),
+            })
+        return out
+
+    def delete(self, source_id: str) -> bool:
+        try:
+            self.path(source_id).unlink()
+            return True
+        except OSError:
+            return False
+
+    def rules(self, source_id: str) -> list[dict]:
+        data = self.load(source_id)
+        return (data or {}).get("rules", [])
+
     def info(self) -> dict[str, dict]:
         out = {}
         for src in SOURCES:

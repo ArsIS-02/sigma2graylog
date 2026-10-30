@@ -580,6 +580,61 @@ class UrlRequest(BaseModel):
     url: str = Field(min_length=8, max_length=2048)
 
 
+class LibraryLoadRequest(BaseModel):
+    product: str | None = None
+    level: str | None = None
+    limit: int = Field(default=50, ge=1, le=300)
+
+
+@app.get("/api/library", dependencies=[Depends(current_user)])
+def library_list():
+    """Скачанные наборы правил: остаются на диске и переживают перезапуск."""
+    return {"items": source_cache.listing()}
+
+
+@app.get("/api/library/{source_id}/preview", dependencies=[Depends(current_user)])
+def library_preview(source_id: str, product: str = "", limit: int = 300):
+    """Список правил набора (по продуктам) — для разворота в интерфейсе."""
+    rules = source_cache.rules(source_id)
+    if not rules:
+        raise HTTPException(status_code=404, detail="Набор не найден в библиотеке")
+    picked = [r for r in rules if not product or (r.get("product") or "") == product.lower()]
+    groups: dict[str, list[dict]] = {}
+    for r in picked:
+        groups.setdefault(r.get("product") or "—", []).append(
+            {"title": r.get("title"), "level": r.get("level"), "category": r.get("category")})
+    for key in groups:
+        groups[key].sort(key=lambda r: (r["title"] or "").lower())
+    return {"total": len(picked), "groups": groups, "limit": limit}
+
+
+@app.post("/api/library/{source_id}/load", dependencies=[Depends(current_user)])
+def library_load(source_id: str, req: LibraryLoadRequest):
+    """Загрузить набор из библиотеки в конвертер — без повторного скачивания."""
+    rules = source_cache.rules(source_id)
+    if not rules:
+        raise HTTPException(status_code=404, detail="Набор не найден в библиотеке")
+    picked = sources_mod.filter_rules(rules, req.product, None, req.level, None, req.limit)
+    if not picked:
+        raise HTTPException(status_code=404, detail="Под указанные фильтры правил не нашлось")
+    return {
+        "source": {"id": source_id, "name": source_id},
+        "sigma": "\n---\n".join(r["text"] for r in picked),
+        "rule_count": len(picked),
+        "total_available": len(rules),
+        "matched": len(picked),
+        "titles": [r["title"] for r in picked[:30]],
+        "cached": True,
+    }
+
+
+@app.delete("/api/library/{source_id}", dependencies=[Depends(current_user)])
+def library_delete(source_id: str):
+    if not source_cache.delete(source_id):
+        raise HTTPException(status_code=404, detail="Набор не найден в библиотеке")
+    return {"deleted": True}
+
+
 @app.get("/api/samples/random", dependencies=[Depends(current_user)])
 def sample(exclude: str = "", index: int | None = None):
     """Правило из встроенной коллекции: случайное или с фиксированным номером."""

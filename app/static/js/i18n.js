@@ -280,6 +280,16 @@
     '(`/data/settings.json`, права 600) и в браузер не возвращаются.':
       '(`/data/settings.json`, mode 600) and never returned to the browser.',
     'Пустое поле оставляет прежнее значение.': 'An empty field keeps the current value.',
+    'Библиотека наборов': 'Rule library',
+    'Обновить список': 'Refresh list',
+    'Пока пусто — скачайте набор из каталога.': 'Empty so far — download a set from the catalog.',
+    'Развернуть': 'Expand',
+    'Удалить из библиотеки': 'Remove from library',
+    'Удалить набор «': 'Remove set "',
+    '» из библиотеки?': '" from the library?',
+    'загружаю список правил…': 'loading rule list…',
+    'не удалось прочитать библиотеку: ': 'could not read the library: ',
+    'правил': 'rules',
     // --- служебное ---
     'Секреты': 'Secrets',
     'sigma2graylog — на главную': 'sigma2graylog — home',
