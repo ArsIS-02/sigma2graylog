@@ -310,6 +310,14 @@
     'Перечитать список полей из Graylog': 'Reload the field list from Graylog',
     'Вставьте YAML Sigma-правила (можно несколько через ---)': 'Paste Sigma rule YAML (several separated by ---)',
     'https://… YAML, zip или tar.gz с правилами': 'https://… YAML, zip or tar.gz with rules',
+    // --- наборы библиотеки (название и описание приходят с сервера на русском) ---
+    'SigmaHQ — все правила': 'SigmaHQ — all rules',
+    'Официальный репозиторий SigmaHQ, релизный архив (~3000 правил, 3 МБ)': 'Official SigmaHQ repository, release archive (~3000 rules, 3 MB)',
+    'Только курируемое ядро правил SigmaHQ (1.4 МБ)': 'Only the curated SigmaHQ core rules (1.4 MB)',
+    'Текущее состояние репозитория, включая правила вне релиза': 'Current repository state, including rules outside the release',
+    'Коллекция правил для threat hunting по ключевым словам': 'Rule collection for keyword-based threat hunting',
+    'Практические правила под Windows/AD-атаки и пентест': 'Practical rules for Windows/AD attacks and pentesting',
+    'набор обрезан по лимиту': 'set truncated by the limit',
   };
 
   // составные подписи вида «демо: <правило>» — переводим только префикс
@@ -320,6 +328,7 @@
     ['Источник: ', 'Source: '],
     ['Текущее подключение: ', 'Current connection: '],
     ['· авторизация: ', '· auth: '],
+    ['Загрузить только ', 'Load only '],
     ['загружаю ', 'loading '],
     ['скачиваю ', 'downloading '],
     ['пример ', 'sample '],
@@ -339,6 +348,14 @@
     [/^всего за (\d+) дн\.: (.*)$/, 'total over $1 days: $2'],
     [/^· авторизация: (.*)$/, '· auth: $1'],
     [/^загружено (\d+) правил(.*)$/, 'loaded $1 rules$2'],
+    [/^(\d+) правил · (.+)$/, '$1 rules · $2'],
+    [/^(\d+) правил$/, '$1 rules'],
+    [/^(.+): (\d+) правил из (\d+) файлов$/, '$1: $2 rules from $3 files'],
+    [/^(.+): (\d+) правил$/, '$1: $2 rules'],
+    [/^(.+): загружено (\d+) из (\d+) правил \(лимит (\d+); конвертация идёт пачками до 60\)$/, '$1: loaded $2 of $3 rules (limit $4; converted in batches of up to 60)'],
+    [/^(.+): загружено (\d+) правил \(лимит (\d+); конвертация идёт пачками до 60\)$/, '$1: loaded $2 rules (limit $3; converted in batches of up to 60)'],
+    [/^(.+): загружено (\d+) правил \(под фильтр подошло (\d+) из (\d+)\) · из кэша$/, '$1: loaded $2 rules ($3 of $4 matched the filter) · from cache'],
+    [/^(.+): загружено (\d+) правил \(под фильтр подошло (\d+) из (\d+)\)$/, '$1: loaded $2 rules ($3 of $4 matched the filter)'],
     [/^пропущено (\d+)$/, 'skipped $1'],
     [/^\u2026 и ещё (\d+)$/, '… and $1 more'],
   ];
