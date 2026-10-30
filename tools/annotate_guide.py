@@ -35,9 +35,10 @@ STEPS = {
         ],
     },
     "g2-sources": {
-        "source": "01-converter.png", "crop": (10, 95, 706, 280),
+        "source": "06-library.png", "crop": (20, 250, 780, 578),
+        "en": {"source": "07-library.png"},
         "marks": [
-            {"label": "1", "probe": (250, 160, 240, INPUT_BG), "band": (18, 690)},
+            {"label": "1", "band_y": (250, 520), "band": (4, 756)},
         ],
     },
     "g3-result": {

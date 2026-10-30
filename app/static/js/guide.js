@@ -23,7 +23,7 @@
       title: S('Возьмите Sigma-правило', 'Get a Sigma rule'),
       lead: S('Вкладка <b>«Конвертер»</b>. Правило можно получить четырьмя способами.',
               'The <b>Converter</b> tab. There are four ways to get a rule.'),
-      img: 'g2-sources', marks: { ru: [{ x: 3.8, y: 53.0 }], en: [{ x: 3.8, y: 53.0 }] },
+      img: 'g2-sources', marks: { ru: [{ x: 3.5, y: 41.2 }], en: [{ x: 3.5, y: 41.2 }] },
       bullets: [
         S('<b>1</b> — <b>«Библиотека наборов»</b> (SigmaHQ: все правила, core, master; ThreatHunting Keywords; SIGMA detection rules). У набора видны число правил и разбивка по продуктам; <b>«Загрузить»</b> берёт набор целиком, <b>«Загрузить только windows»</b> — один продукт. Фильтры по продукту, уровню и лимиту — в шапке библиотеки, новый набор добавляет <b>«＋ из каталога»</b>. Первая загрузка ~6 секунд, кэш на сутки.',
           '<b>1</b> — the <b>Rule library</b> (SigmaHQ: all rules, core, master; ThreatHunting Keywords; SIGMA detection rules). Each set shows its rule count and a per-product breakdown; <b>Load</b> takes the whole set, <b>Load only windows</b> a single product. Product, level and limit filters sit in the library header, and <b>＋ from catalog</b> adds a new set. First load takes ~6 seconds, cached for a day.'),
