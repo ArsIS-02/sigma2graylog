@@ -88,6 +88,9 @@ docker run -d --name sigma2graylog --restart unless-stopped \
 
 ## Развёртывание
 
+Инструкция на двух языках: **[DEPLOY.md](DEPLOY.md)** (русский) и **[DEPLOY.en.md](DEPLOY.en.md)** (English).
+
+
 Подробная инструкция со всеми вариантами — **[DEPLOY.md](DEPLOY.md)**: команды, тома, автозапуск,
 реверс-прокси, Kubernetes и разбор типичных ошибок.
 

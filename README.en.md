@@ -36,8 +36,26 @@ historical data — before you create a detection.
 | **Extractor generator** | emits a Graylog pipeline rule for a field missing in your stream |
 | **Settings UI** | Graylog URL, token or password, cache TTL, defaults — secrets encrypted at rest |
 | **Built-in guide** | a "Guide" tab: seven annotated steps with animated pointers |
+| **Two languages** | Russian and English UI, switcher in the header, `?lang=en` links |
 
-![Streams](docs/screenshots/02-streams.png)
+## Built-in guide
+
+The app has a **Guide** tab — the path from connecting to Graylog to a working detection in seven
+steps. Each step is a short text plus a screenshot where the relevant elements are outlined,
+numbered and marked with pulsing pointers. The guide is fully translated, and each language has its
+own screenshots taken from that language's UI.
+
+![Guide](docs/screenshots/en/06-guide.png)
+
+## Languages
+
+The UI is bilingual: Russian and English. The **RU / EN** switcher is in the top right corner; the
+choice is remembered in the browser, and a link can force it with `?lang=en`.
+
+Translated: tabs, buttons, hints, conversion warnings (built on the server and returned in the
+requested language), the built-in guide with its illustrations, and demo-mode sample data.
+
+![Streams](docs/screenshots/en/02-streams.png)
 
 ## Quick start (demo, no Graylog needed)
 
@@ -68,6 +86,23 @@ details under Settings — the UI validates them with a live request to `/api/sy
 > `:Z`. With `:Z` podman assigns new MCS categories on every container re-creation, previously
 > written files become unreadable, and the app re-creates `users.json` on start, silently resetting
 > the password.
+
+## Deployment
+
+Full instructions in **English**: **[DEPLOY.en.md](DEPLOY.en.md)** — Russian: [DEPLOY.md](DEPLOY.md).
+
+| Option | When it fits |
+|---|---|
+| `docker run` / `podman run` | take a look, single server |
+| Docker Compose / podman-compose | several services side by side |
+| Podman + systemd (quadlet) | production on RHEL / Fedora / RedOS |
+| Kubernetes / k3s | you already run a cluster |
+| venv + systemd | containers are not allowed |
+| offline (`docker save` / `load`) | no internet access |
+
+Ready-made files: [`docker-compose.yml`](docker-compose.yml),
+[`podman-compose.yaml`](podman-compose.yaml), [`deploy/`](deploy) — quadlet unit, systemd service,
+nginx and Caddy configs, a Kubernetes manifest.
 
 ## Configuration
 

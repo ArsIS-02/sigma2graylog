@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from contextvars import ContextVar
+
 import hashlib
 import random
 from datetime import datetime, timedelta, timezone
@@ -34,47 +36,56 @@ _FIELDS_MACOS = [
 ]
 _COMMON = ["timestamp", "source", "message", "streams", "raw_message", "level"]
 
+# язык демо-данных берётся из контекста запроса (ставится middleware в main.py)
+LANG: ContextVar[str] = ContextVar("demo_lang", default="ru")
+
+
+def _t(ru: str, en: str) -> str:
+    """Строка на языке текущего запроса."""
+    return en if LANG.get() == "en" else ru
+
+
 DEMO_STREAMS = [
-    {"id": "demo-windows", "title": "Windows — Sysmon и Security",
+    {"id": "demo-windows", "title": ("Windows — Sysmon и Security", "Windows — Sysmon and Security"),
      "product": "windows", "events": 958_431, "fields": _FIELDS_WINDOWS + _COMMON,
      "index_set_id": "demo-index-default"},
-    {"id": "demo-linux", "title": "Linux — auditd",
+    {"id": "demo-linux", "title": ("Linux — auditd", "Linux — auditd"),
      "product": "linux", "events": 1_920_109, "fields": _FIELDS_LINUX + _COMMON,
      "index_set_id": "demo-index-linux"},
-    {"id": "demo-macos", "title": "macOS — endpoint",
+    {"id": "demo-macos", "title": ("macOS — endpoint", "macOS — endpoint"),
      "product": "macos", "events": 30_521_718, "fields": _FIELDS_MACOS + _COMMON,
      "index_set_id": "demo-index-macos"},
-    {"id": "demo-proxy", "title": "Web proxy",
+    {"id": "demo-proxy", "title": ("Web proxy", "Web proxy"),
      "product": None, "events": 5_390_562,
      "fields": ["cs-method", "cs-host", "cs-uri", "sc-status", "c-useragent", "source"] + _COMMON,
      "index_set_id": "demo-index-default"},
-    {"id": "demo-container", "title": "Containers",
+    {"id": "demo-container", "title": ("Containers", "Containers"),
      "product": None, "events": 466,
      "fields": ["CMDLINE", "COMM", "SYSTEMD_UNIT", "log_c", "source"] + _COMMON,
      "index_set_id": "demo-index-default"},
 ]
 
 DEMO_DEFINITIONS = [
-    ("PowerShell с закодированной командой", 2, "demo-windows",
+    (("PowerShell с закодированной командой", "PowerShell with an encoded command"), 2, "demo-windows",
      'win_image:/.*\\[Pp][Oo][Ww][Ee][Rr][Ss][Hh][Ee][Ll][Ll]\\.exe/ AND '
      'winlogbeat_winlog_event_data_CommandLine:/.*\\-[Ee][Nn][Cc].*/', "2026-10-27T09:14:00Z"),
-    ("Mimikatz в командной строке", 1, "demo-windows",
+    (("Mimikatz в командной строке", "Mimikatz on the command line"), 1, "demo-windows",
      'winlogbeat_winlog_event_data_CommandLine:/.*sekurlsa::logonpasswords.*/', "2026-10-26T22:03:00Z"),
-    ("Загрузка через certutil", 2, "demo-windows",
+    (("Загрузка через certutil", "Download via certutil"), 2, "demo-windows",
      'win_image:/.*certutil\\.exe/ AND winlogbeat_winlog_event_data_CommandLine:/.*urlcache.*/', None),
-    ("Выгрузка NTDS через ntdsutil", 1, "demo-windows",
+    (("Выгрузка NTDS через ntdsutil", "NTDS dump via ntdsutil"), 1, "demo-windows",
      'win_image:/.*ntdsutil\\.exe/ AND winlogbeat_winlog_event_data_CommandLine:/.*ntds.*/', None),
-    ("Подозрительный rundll32", 3, "demo-windows",
+    (("Подозрительный rundll32", "Suspicious rundll32"), 3, "demo-windows",
      'win_image:/.*rundll32\\.exe/ AND winlogbeat_winlog_event_data_CommandLine:/.*javascript:.*/', "2026-10-24T11:41:00Z"),
-    ("Изменение sudoers", 2, "demo-linux",
+    (("Изменение sudoers", "sudoers modification"), 2, "demo-linux",
      'name:(/etc/sudoers* OR /etc/sudoers.d/*)', "2026-10-25T18:20:00Z"),
-    ("Обратный шелл через bash", 1, "demo-linux",
+    (("Обратный шелл через bash", "Reverse shell via bash"), 1, "demo-linux",
      'proctitle:/.*bash -i >& /dev/tcp/.*/', None),
-    ("Запуск шелла из нестандартного каталога", 3, "demo-linux",
+    (("Запуск шелла из нестандартного каталога", "Shell started from an unusual directory"), 3, "demo-linux",
      'audit_type:EXECVE AND exe:/.*\\/tmp\\/.*/', "2026-10-23T07:55:00Z"),
-    ("Подбор пароля FreeIPA", 3, "demo-proxy",
+    (("Подбор пароля FreeIPA", "FreeIPA password spraying"), 3, "demo-proxy",
      'application_name:freeipa_389_audit AND message:PREAUTH_FAILED', None),
-    ("Обращение к редкому домену", 2, "demo-proxy",
+    (("Обращение к редкому домену", "Request to a rare domain"), 2, "demo-proxy",
      'cs-host:/.*\\.(top|xyz)/ AND sc-status:200', "2026-10-22T13:12:00Z"),
 ]
 
@@ -106,9 +117,13 @@ class FakeGraylog:
         names = sorted({f for s in DEMO_STREAMS for f in s["fields"]})
         return [{"name": n, "type": None} for n in names]
 
+    def _stream_title(self, stream: dict) -> str:
+        title = stream.get("title")
+        return _t(*title) if isinstance(title, tuple) else title
+
     def streams(self) -> list[dict]:
         return [
-            {"id": s["id"], "title": s["title"], "description": "",
+            {"id": s["id"], "title": self._stream_title(s), "description": "",
              "index_set_id": s["index_set_id"], "disabled": False}
             for s in DEMO_STREAMS
         ]
@@ -131,9 +146,11 @@ class FakeGraylog:
 
     # --- детекты -----------------------------------------------------------
     def _definition_payload(self, title, priority, stream_id, query, matched_at) -> dict:
+        ru_title = title[0] if isinstance(title, tuple) else title
+        shown = _t(*title) if isinstance(title, tuple) else title
         return {
-            "id": "demo-" + hashlib.sha1(title.encode()).hexdigest()[:12],
-            "title": title, "description": "Демонстрационный детект",
+            "id": "demo-" + hashlib.sha1(ru_title.encode()).hexdigest()[:12],
+            "title": shown, "description": _t("Демонстрационный детект", "Demo detection"),
             "priority": priority, "alert": False, "matched_at": matched_at,
             "updated_at": "2026-10-28T10:00:00Z", "query": query,
             "streams": [stream_id], "execute_every_ms": 60_000,
@@ -212,13 +229,17 @@ class FakeGraylog:
         total = sum(b["count"] for b in buckets)
         avg = round(total / max(len(buckets), 1), 1)
         if total == 0:
-            verdict = {"level": "warn", "text": "На исторических данных не срабатывает ни разу"}
+            verdict = {"level": "warn", "text": _t("На исторических данных не срабатывает ни разу",
+                                          "Never matched against historical data")}
         elif avg >= 1000:
-            verdict = {"level": "error", "text": f"Очень шумно: в среднем {avg:g} срабатываний в сутки"}
+            verdict = {"level": "error", "text": _t(f"Очень шумно: в среднем {avg:g} срабатываний в сутки",
+                                           f"Very noisy: {avg:g} matches per day on average")}
         elif avg >= 100:
-            verdict = {"level": "warn", "text": f"Шумновато: в среднем {avg:g} срабатываний в сутки"}
+            verdict = {"level": "warn", "text": _t(f"Шумновато: в среднем {avg:g} срабатываний в сутки",
+                                          f"Rather noisy: {avg:g} matches per day on average")}
         else:
-            verdict = {"level": "ok", "text": f"Умеренно: в среднем {avg:g} срабатываний в сутки"}
+            verdict = {"level": "ok", "text": _t(f"Умеренно: в среднем {avg:g} срабатываний в сутки",
+                                        f"Moderate: {avg:g} matches per day on average")}
         picked = [{"timestamp": (today - timedelta(days=1)).isoformat() + "T08:15:00Z",
                    "source": src, "message": msg} for src, msg in DEMO_SAMPLES[:max(0, samples)]]
         return {

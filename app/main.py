@@ -1013,6 +1013,13 @@ def request_lang(request: Request) -> str:
     return lang_of(request.headers.get("x-lang") or request.headers.get("accept-language"))
 
 
+@app.middleware("http")
+async def _demo_lang(request: Request, call_next):
+    """Язык демо-данных: из заголовка X-Lang текущего запроса."""
+    demo_mod.LANG.set(request_lang(request))
+    return await call_next(request)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     if not DEMO_MODE and not sessions.verify(_cookie(request) or "", users):
