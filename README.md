@@ -5,7 +5,7 @@
 <h1 align="center">sigma2graylog</h1>
 
 [![сборка и тесты](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml/badge.svg)](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml)
-[![лицензия: MIT](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-blue.svg)](LICENSE)
+[![лицензия: GPL-3.0](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-GPL--3.0-blue.svg)](LICENSE)
 [![python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg)](https://www.python.org/)
 [![Graylog 7.x](https://img.shields.io/badge/Graylog-7.x-ff3633.svg)](https://graylog.org/)
 
@@ -319,7 +319,7 @@ pytest -q tests
 
 ## Лицензия
 
-MIT — см. [LICENSE](LICENSE). Сторонние компоненты и их лицензии — в [THIRD-PARTY.md](THIRD-PARTY.md):
+GPL-3.0 — см. [LICENSE](LICENSE). Сторонние компоненты и их лицензии — в [THIRD-PARTY.md](THIRD-PARTY.md):
 pySigma (LGPL-2.1) и pySigma-backend-elasticsearch (LGPL-3.0) устанавливаются как зависимости
 из PyPI и в исходники не входят.
 

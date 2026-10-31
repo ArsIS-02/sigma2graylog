@@ -5,7 +5,7 @@
 <h1 align="center">sigma2graylog</h1>
 
 [![build and tests](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml/badge.svg)](https://github.com/ArsIS-02/sigma2graylog/actions/workflows/ci.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg)](https://www.python.org/)
 [![Graylog 7.x](https://img.shields.io/badge/Graylog-7.x-ff3633.svg)](https://graylog.org/)
 
@@ -187,7 +187,7 @@ Verified against Graylog 7.2.1:
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Third-party components are listed in [THIRD-PARTY.md](THIRD-PARTY.md);
+GPL-3.0 — see [LICENSE](LICENSE). Third-party components are listed in [THIRD-PARTY.md](THIRD-PARTY.md);
 pySigma and pySigma-backend-elasticsearch are LGPL and are installed as dependencies, not vendored.
 
 Russian documentation: [README.md](README.md).
