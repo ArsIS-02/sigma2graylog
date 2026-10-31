@@ -228,6 +228,12 @@
   .user .dd .sep{height:1px;background:var(--line);margin:5px 4px}
   dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:520px;width:92%}
   dialog::backdrop{background:#000a}
+  .msg-dlg{max-width:460px}
+  .msg-body{color:var(--text);white-space:pre-line;line-height:1.5}
+  .msg-list{margin:10px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted);max-height:180px;overflow:auto}
+  .msg-list li{padding:3px 0;border-top:1px solid var(--line)}
+  .msg-list li:first-child{border-top:0}
+  .msg-dlg.danger #msg-ok{background:var(--err);border-color:var(--err);color:#fff}
   dialog label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
   dialog input,dialog textarea{width:100%}
   dialog textarea{min-height:80px}
@@ -510,6 +516,16 @@
   </div>
 </dialog>
 
+<dialog id="dlg-msg" class="msg-dlg">
+  <h3 id="msg-title" style="margin:0 0 8px"></h3>
+  <div id="msg-body" class="msg-body"></div>
+  <ul id="msg-list" class="msg-list" style="display:none"></ul>
+  <div class="row" style="margin-top:16px;justify-content:flex-end">
+    <button class="ghost" id="msg-cancel">Отмена</button>
+    <button id="msg-ok">OK</button>
+  </div>
+</dialog>
+
 <dialog id="dlg-pass">
   <h3 style="margin:0 0 6px">Смена пароля</h3>
   <div class="meta">Пароль хранится как scrypt-хэш, смена сразу завершает другие сессии.</div>
@@ -528,6 +544,35 @@
 
 <script>
 const T = (s) => (window.I18N ? window.I18N.t(s) : s);
+
+// Диалоги в стиле интерфейса вместо нативных alert/confirm.
+// uiConfirm(...) -> Promise<boolean>, uiAlert(...) -> Promise<void>
+function uiDialog({ title, body = '', items = [], ok = 'OK', cancel = 'Отмена', danger = false, single = false }) {
+  const dlg = $('#dlg-msg');
+  $('#msg-title').textContent = T(title);
+  $('#msg-body').textContent = body;
+  const list = $('#msg-list');
+  list.innerHTML = items.map(i => `<li>${esc(i)}</li>`).join('');
+  list.style.display = items.length ? '' : 'none';
+  $('#msg-ok').textContent = T(ok);
+  $('#msg-cancel').textContent = T(cancel);
+  $('#msg-cancel').style.display = single ? 'none' : '';
+  dlg.classList.toggle('danger', !!danger);
+  return new Promise(resolve => {
+    const done = (value) => {
+      $('#msg-ok').onclick = $('#msg-cancel').onclick = dlg.oncancel = null;
+      dlg.close();
+      resolve(value);
+    };
+    $('#msg-ok').onclick = () => done(true);
+    $('#msg-cancel').onclick = () => done(false);
+    dlg.oncancel = (e) => { e.preventDefault(); done(false); };
+    dlg.showModal();
+    $('#msg-ok').focus();
+  });
+}
+const uiConfirm = (opts) => uiDialog(opts);
+const uiAlert = (title, body) => uiDialog({ title, body, ok: 'OK', single: true });
 const $ = (s) => document.querySelector(s);
 let state = { result: null, overrides: {}, streams: [], publicUrl: '', dets: { page: 1 } };
 
@@ -953,10 +998,11 @@ function bindResultHandlers(data) {
           attack: r.attack ? { tactics: r.attack.tactics, techniques: r.attack.techniques } : null,
           aggregation: r.aggregation || null,
         }));
-      if (!items.length) { alert(T('Ничего не выбрано')); return; }
-      if (!confirm(`Создать в Graylog ${items.length} детект(ов)?\n\n` +
-          items.slice(0, 8).map(i => '· ' + i.title).join('\n') +
-          (items.length > 8 ? `\n… и ещё ${items.length - 8}` : ''))) return;
+      if (!items.length) { await uiAlert('Ничего не выбрано'); return; }
+      const shown = items.slice(0, 8).map(i => i.title);
+      if (items.length > 8) shown.push(`… +${items.length - 8}`);
+      if (!await uiConfirm({ title: 'Создать детекты в Graylog?',
+          body: `${T('Будет создано')}: ${items.length}`, items: shown, ok: 'Создать' })) return;
       createBtn.disabled = true;
       createBtn.textContent = 'Создаю…';
       try {
@@ -1132,7 +1178,7 @@ $('#d-create').onclick = async () => {
     $('#result').insertAdjacentHTML('afterbegin',
       `<div class="warn info">Детект создан: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title || d.id)}</a></div>`);
   } catch (e) {
-    alert(T('Не удалось создать: ') + e.message);
+    uiAlert('Не удалось создать', e.message);
   } finally {
     $('#d-create').disabled = false;
   }
@@ -1293,9 +1339,9 @@ document.addEventListener('click', async (ev) => {
   const del = ev.target.closest('[data-lib-del]');
   if (del) {
     const id = del.dataset.libDel;
-    if (!confirm(T('Удалить набор «') + id + T('» из библиотеки?'))) return;
+    if (!await uiConfirm({ title: 'Удалить набор из библиотеки?', body: id, ok: 'Удалить', danger: true })) return;
     try { await api(`/api/library/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
-    catch (e) { alert(T('Не удалось удалить: ') + e.message); }
+    catch (e) { uiAlert('Не удалось удалить', e.message); }
     loadLibrary();
     return;
   }
@@ -1510,7 +1556,7 @@ $('#btn-clear').onclick = () => {
 $('#btn-refresh').onclick = async () => {
   $('#btn-refresh').disabled = true;
   try { const d = await api('/api/fields/refresh', { method: 'POST' }); $('#st-fields').innerHTML = 'полей: <b>' + d.fields + '</b>'; }
-  catch (e) { alert(T('Не удалось обновить поля: ') + e.message); }
+  catch (e) { uiAlert('Не удалось обновить поля', e.message); }
   finally { $('#btn-refresh').disabled = false; }
 };
 
@@ -1839,7 +1885,7 @@ $('#sd-save').onclick = async () => {
     setTimeout(() => $('#sd-save').textContent = 'Сохранить маппинг для стрима', 1500);
     openStream(streamsState.active);
   } catch (e) {
-    alert(T('Не удалось сохранить: ') + e.message);
+    uiAlert('Не удалось сохранить', e.message);
   } finally {
     $('#sd-save').disabled = false;
   }
@@ -1909,13 +1955,13 @@ function renderDetections(d) {
   });
   $('#det-list').querySelectorAll('[data-det-del]').forEach(b => b.onclick = async () => {
     const title = b.dataset.detTitle;
-    if (!confirm(T('Удалить детект «') + title + T('» из Graylog? Действие необратимо.'))) return;
+    if (!await uiConfirm({ title: 'Удалить детект из Graylog?', body: title + '\n\n' + T('Действие необратимо.'), ok: 'Удалить', danger: true })) return;
     b.disabled = true;
     try {
       await api('/api/detections/' + encodeURIComponent(b.dataset.detDel), { method: 'DELETE' });
       loadDetections(state.dets.page);
     } catch (e) {
-      alert(T('Не удалось удалить: ') + e.message);
+      uiAlert('Не удалось удалить', e.message);
       b.disabled = false;
     }
   });
