@@ -12,7 +12,7 @@
 | [httpx](https://github.com/encode/httpx) | BSD-3-Clause | HTTP-клиент |
 | [cryptography](https://github.com/pyca/cryptography) | Apache-2.0 / BSD-3-Clause | шифрование секретов |
 | [PyYAML](https://github.com/yaml/pyyaml) | MIT | разбор YAML |
-| [MITRE ATT&CK](https://attack.mitre.org/) | [условия использования MITRE](https://attack.mitre.org/resources/terms-of-use/) | названия тактик и техник v20 в `app/data/attack_v20.json` |
+| [MITRE ATT&CK](https://attack.mitre.org/) | [условия использования MITRE](https://attack.mitre.org/resources/terms-of-use/) | названия тактик и техник v20 в `app/attack_v20.json` |
 | [python-multipart](https://github.com/Kludex/python-multipart) | Apache-2.0 | загрузка файлов |
 
 ## Что это значит на практике

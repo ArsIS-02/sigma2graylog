@@ -7,7 +7,7 @@
   mitre_technique   T1059.001 PowerShell          (основная: первая в тегах)
   mitre_techniques  T1059.001, T1105              (все)
 
-Справочник — ATT&CK v20 (app/data/attack_v20.json). В v20 часть идентификаторов заменена
+Справочник — ATT&CK v20 (app/attack_v20.json). В v20 часть идентификаторов заменена
 (T1562.* -> T1685.*/T1686.*, T1070.001/.002 -> T1685.005/.006), старые теги переводятся
 на новые и помечаются в `renamed`. Неизвестный справочнику идентификатор сохраняется как есть.
 """
@@ -18,7 +18,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-_REF_PATH = Path(__file__).resolve().parent / "data" / "attack_v20.json"
+_REF_PATH = Path(__file__).resolve().parent / "attack_v20.json"
 
 # идентификаторы, которых в ATT&CK v20 больше нет
 RENAMED = {
