@@ -65,6 +65,11 @@
 
     // --- детекты ---
     'Детекты в Graylog': 'Detections in Graylog',
+    'Покрытие ATT&CK': 'ATT&CK coverage',
+    'Покрытие ATT&CK алертами Graylog': 'ATT&CK coverage by Graylog alerts',
+    'Только покрытые техники': 'Covered techniques only',
+    'Только основная техника определения': 'Primary technique of a definition only',
+    'Слой для Navigator': 'Navigator layer',
     'поиск по названию или описанию': 'search by name or description',
     'Описание': 'Description',
     'Название': 'Title',

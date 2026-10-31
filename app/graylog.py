@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import httpx
 
+from .attack import definition_techniques as attack_definition_techniques
 from .attack import field_spec as attack_field_spec
 from .attack import with_description as attack_description
 
@@ -285,6 +286,24 @@ class Graylog:
                 break
             out.extend(items)
             if len(out) >= chunk["total"]:
+                break
+            page += 1
+        return out[:max_items]
+
+    def attack_definitions(self, max_items: int = 1000) -> list[dict]:
+        """Все определения с техниками ATT&CK из полей mitre_* (для карты покрытия)."""
+        out: list[dict] = []
+        page = 1
+        while len(out) < max_items:
+            data = self._get("/api/events/definitions", page=page, per_page=100)
+            chunk = data.get("event_definitions", [])
+            if not chunk:
+                break
+            for e in chunk:
+                ids, primary = attack_definition_techniques(e.get("field_spec"))
+                out.append({"id": e.get("id"), "title": e.get("title") or "(без названия)",
+                            "state": e.get("state"), "techniques": ids, "primary": primary})
+            if len(out) >= data.get("total", len(out)):
                 break
             page += 1
         return out[:max_items]

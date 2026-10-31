@@ -20,6 +20,7 @@ from . import detections as detections_mod
 from . import demo as demo_mod
 from . import loader, samples, sources as sources_mod
 from . import mapping as mapping_mod
+from . import attack as attack_mod
 from .i18n import lang_of
 from .version import __version__
 from .settings import SettingsStore
@@ -996,6 +997,32 @@ def bulk_create(req: BulkRequest):
         if row.get("id"):
             row["url"] = f"{base}/events/definitions/{row['id']}"
     return {"summary": summary, "results": results, "dry_run": req.dry_run}
+
+
+@app.get("/api/attack/coverage", dependencies=[Depends(current_user)])
+def attack_coverage():
+    """Карта покрытия ATT&CK по полям mitre_* определений событий Graylog."""
+    g = client(effective_config())
+    try:
+        return attack_mod.coverage(g.attack_definitions())
+    except GraylogError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        g.close()
+
+
+@app.get("/api/attack/layer", dependencies=[Depends(current_user)])
+def attack_layer():
+    """Слой для ATT&CK Navigator (JSON-файл)."""
+    g = client(effective_config())
+    try:
+        layer = attack_mod.navigator_layer(g.attack_definitions())
+    except GraylogError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        g.close()
+    return JSONResponse(layer, headers={
+        "Content-Disposition": 'attachment; filename="graylog-attack-coverage.layer.json"'})
 
 
 @app.get("/api/detections/{definition_id}", dependencies=[Depends(current_user)])

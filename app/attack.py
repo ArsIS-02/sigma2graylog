@@ -176,3 +176,111 @@ def for_rule(rule) -> dict | None:
     return {"tactics": parsed["tactics"], "techniques": parsed["techniques"],
             "renamed": parsed["renamed"], "tactic": d["tactic"], "technique": d["technique"],
             "items": d["items"]}
+
+
+# ---------------------------------------------------------------- покрытие
+TACTIC_ORDER = ["reconnaissance", "resource-development", "initial-access", "execution",
+                "persistence", "privilege-escalation", "stealth", "defense-impairment",
+                "credential-access", "discovery", "lateral-movement", "collection",
+                "command-and-control", "exfiltration", "impact"]
+
+_ID_RE = re.compile(r"T\d{4}(?:\.\d{3})?")
+
+
+def definition_techniques(field_spec: dict | None) -> tuple[list[str], str | None]:
+    """Идентификаторы техник из field_spec определения: (все, основная).
+
+    Читает поля mitre_techniques и mitre_technique, которые записывает create_event_definition.
+    """
+    def template(key: str) -> str:
+        try:
+            return str(field_spec[key]["providers"][0]["template"])
+        except (KeyError, IndexError, TypeError):
+            return ""
+
+    ids = _ID_RE.findall(template("mitre_techniques"))
+    first = _ID_RE.search(template("mitre_technique"))
+    primary = first.group(0) if first else (ids[0] if ids else None)
+    if primary and primary not in ids:
+        ids.insert(0, primary)
+    return ids, primary
+
+
+def coverage(definitions: list[dict]) -> dict:
+    """Матрица покрытия по списку определений.
+
+    definitions: [{"id", "title", "techniques": [ID], "primary": ID | None}, ...]
+    Возвращает тактики (в порядке ATT&CK) с техниками верхнего уровня; у каждой техники и
+    подтехники список определений. Определения без техник уходят в `unmapped`.
+    """
+    ref = reference()
+    covered: dict[str, list[dict]] = {}
+    unmapped: list[str] = []
+    unknown: dict[str, list[str]] = {}
+    mapped = 0
+    for d in definitions:
+        ids = d.get("techniques") or []
+        if not ids:
+            unmapped.append(d.get("title", ""))
+            continue
+        mapped += 1
+        for tid in ids:
+            if tid not in ref["techniques"]:
+                unknown.setdefault(tid, []).append(d.get("title", ""))
+                continue
+            covered.setdefault(tid, []).append(
+                {"id": d.get("id"), "title": d.get("title", ""), "primary": tid == d.get("primary")})
+
+    techs = ref["techniques"]
+    tactics = []
+    for key in TACTIC_ORDER:
+        if key not in ref["tactics"]:
+            continue
+        items = []
+        for tid, t in sorted(techs.items()):
+            if t["sub"] or key not in t["tactics"]:
+                continue
+            subs = [{"id": sid, "name": s["name"], "defs": covered[sid]}
+                    for sid, s in sorted(techs.items())
+                    if s["sub"] and sid.startswith(tid + ".") and key in s["tactics"] and sid in covered]
+            items.append({"id": tid, "name": t["name"], "defs": covered.get(tid, []), "subs": subs})
+        tactics.append({"key": key, "name": ref["tactics"][key]["name"],
+                        "id": ref["tactics"][key]["id"], "items": items,
+                        "covered": sum(1 for i in items if i["defs"] or i["subs"])})
+    return {
+        "version": ref.get("version"),
+        "tactics": tactics,
+        "totals": {"definitions": len(definitions), "mapped": mapped,
+                   "unmapped": len(unmapped), "techniques": len(covered)},
+        "unmapped": sorted(unmapped),
+        "unknown": [{"id": k, "definitions": v} for k, v in sorted(unknown.items())],
+    }
+
+
+def navigator_layer(definitions: list[dict], name: str = "Graylog: покрытие алертами") -> dict:
+    """Слой для ATT&CK Navigator: число определений на технику."""
+    ref = reference()
+    count: dict[str, list[str]] = {}
+    for d in definitions:
+        for tid in d.get("techniques") or []:
+            if tid in ref["techniques"]:
+                count.setdefault(tid, []).append(d.get("title", ""))
+    top = max((len(v) for v in count.values()), default=1)
+    return {
+        "name": name,
+        "versions": {"attack": str(ref.get("version", "20")).split(".")[0], "navigator": "5.1.0", "layer": "4.5"},
+        "domain": "enterprise-attack",
+        "description": "Число определений событий Graylog, привязанных к технике.",
+        "sorting": 0,
+        "layout": {"layout": "side", "aggregateFunction": "average", "showID": True,
+                   "showName": True, "showAggregateScores": False, "countUnscored": False,
+                   "expandedSubtechniques": "annotated"},
+        "hideDisabled": False,
+        "techniques": [{"techniqueID": k, "score": len(v), "comment": "; ".join(v), "enabled": True,
+                        "showSubtechniques": "." not in k} for k, v in sorted(count.items())],
+        "gradient": {"colors": ["#d6e9ff", "#2f6fd0"], "minValue": 1, "maxValue": top},
+        "legendItems": [], "metadata": [], "links": [],
+        "showTacticRowBackground": False, "tacticRowBackground": "#dddddd",
+        "selectTechniquesAcrossTactics": True, "selectSubtechniquesWithParent": False,
+        "selectVisibleTechniques": False,
+    }

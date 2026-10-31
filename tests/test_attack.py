@@ -76,3 +76,48 @@ def test_with_description_is_idempotent():
     assert attack.with_description(once, a) == once
     assert attack.with_description("Текст", None) == "Текст"
     assert attack.with_description("", a).startswith("MITRE ATT&CK.")
+
+
+def _fs(tactic, technique, techniques):
+    mk = lambda v: {"providers": [{"template": v}]}  # noqa: E731
+    return {"mitre_tactic": mk(tactic), "mitre_technique": mk(technique), "mitre_techniques": mk(techniques)}
+
+
+def test_definition_techniques_from_field_spec():
+    ids, primary = attack.definition_techniques(
+        _fs("Stealth", "T1070 Indicator Removal", "T1070, T1070.003, T1685.006"))
+    assert ids == ["T1070", "T1070.003", "T1685.006"] and primary == "T1070"
+    assert attack.definition_techniques({"host": {}}) == ([], None)
+    assert attack.definition_techniques(None) == ([], None)
+
+
+def test_coverage_matrix():
+    defs = [
+        {"id": "1", "title": "sudo", "techniques": ["T1548.003"], "primary": "T1548.003"},
+        {"id": "2", "title": "ssh key", "techniques": ["T1098.004"], "primary": "T1098.004"},
+        {"id": "3", "title": "брутфорс", "techniques": ["T1110", "T1110.001"], "primary": "T1110"},
+        {"id": "4", "title": "тишина", "techniques": [], "primary": None},
+        {"id": "5", "title": "чужая", "techniques": ["T9999"], "primary": "T9999"},
+    ]
+    cov = attack.coverage(defs)
+    assert cov["totals"] == {"definitions": 5, "mapped": 4, "unmapped": 1, "techniques": 4}
+    assert cov["unmapped"] == ["тишина"]
+    assert cov["unknown"][0]["id"] == "T9999"
+    by = {t["key"]: t for t in cov["tactics"]}
+    assert [t["key"] for t in cov["tactics"]][:4] == [
+        "reconnaissance", "resource-development", "initial-access", "execution"]
+    cred = {i["id"]: i for i in by["credential-access"]["items"]}
+    assert [d["title"] for d in cred["T1110"]["defs"]] == ["брутфорс"]
+    assert cred["T1110"]["subs"][0]["id"] == "T1110.001"
+    # техника с несколькими тактиками показана в каждой из них
+    pe = {i["id"] for i in by["privilege-escalation"]["items"] if i["subs"] or i["defs"]}
+    assert "T1548" in pe
+
+
+def test_navigator_layer():
+    defs = [{"title": "a", "techniques": ["T1110"]}, {"title": "b", "techniques": ["T1110", "T1105"]},
+            {"title": "c", "techniques": ["T9999"]}]
+    layer = attack.navigator_layer(defs)
+    scores = {t["techniqueID"]: t["score"] for t in layer["techniques"]}
+    assert scores == {"T1110": 2, "T1105": 1}
+    assert layer["gradient"]["maxValue"] == 2 and layer["domain"] == "enterprise-attack"

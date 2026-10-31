@@ -61,6 +61,22 @@
   .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;flex:0 0 auto}
   .brand img{display:block;border-radius:8px}
   .brand:hover h1{color:#fff}
+  .atk-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
+  .atk-matrix{display:grid;grid-template-columns:repeat(15,minmax(150px,1fr));min-width:2300px}
+  .atk-col{border-right:1px solid var(--line);min-width:0}
+  .atk-col:last-child{border-right:0}
+  .atk-ch{background:var(--panel2);padding:8px;border-bottom:1px solid var(--line);position:sticky;top:0}
+  .atk-ch b{display:block;font-size:12.5px}
+  .atk-ch span{font-size:11px;color:var(--muted)}
+  .atk-t{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);padding:5px 8px;font:inherit;font-size:12px;border-radius:0;cursor:default}
+  .atk-t small{color:var(--muted);margin-right:4px;font-size:10.5px}
+  .atk-t.hid{display:none}
+  .atk-t.c{cursor:pointer;color:#0d2240}
+  .atk-t.c small{color:inherit;opacity:.7}
+  .atk-t.c1{background:#cfe1fb}.atk-t.c2{background:#8fb7f2}.atk-t.c3{background:#5c9bff}
+  .atk-t.sel{outline:2px solid var(--text);outline-offset:-2px}
+  .atk-subs{display:block;font-size:10.5px;opacity:.85;margin-top:1px}
+  .atk-detail li{margin:3px 0}
   .brand .ver{font-size:11px;line-height:1;padding:3px 6px;border-radius:9px;border:1px solid var(--line);color:var(--muted);align-self:center;font-variant-numeric:tabular-nums}
   header h1{white-space:nowrap}
   /* браузер подсвечивает автозаполненные поля белым — перекрашиваем под тему */
@@ -228,6 +244,7 @@
     <button data-view="convert" class="active">Конвертер</button>
     <button data-view="streams">Стримы</button>
     <button data-view="detect">Детекты</button>
+    <button data-view="attack">Покрытие ATT&amp;CK</button>
     <button data-view="settings">Настройки</button>
     <button data-view="guide">Руководство</button>
   </nav>
@@ -374,6 +391,23 @@
     </div>
     <div id="det-list"><div class="empty">Загружаю…</div></div>
     <div class="row" id="det-pager" style="justify-content:center;margin-top:12px"></div>
+  </div>
+</section>
+
+<section class="view" id="view-attack" hidden>
+  <div class="panel">
+    <h2>Покрытие ATT&amp;CK алертами Graylog</h2>
+    <div class="row">
+      <label><input type="checkbox" id="atk-only"> Только покрытые техники</label>
+      <label><input type="checkbox" id="atk-primary"> Только основная техника определения</label>
+      <button class="ghost" id="atk-reload">Обновить</button>
+      <a class="ghost" id="atk-layer" href="/api/attack/layer" download style="text-decoration:none;padding:6px 12px;border:1px solid var(--line);border-radius:8px">Слой для Navigator</a>
+      <span class="spacer"></span>
+      <span class="badge" id="atk-stats">—</span>
+    </div>
+    <div id="atk-body"><div class="empty">Загружаю…</div></div>
+    <div id="atk-detail" class="atk-detail" style="margin-top:12px"></div>
+    <div id="atk-unmapped"></div>
   </div>
 </section>
 
@@ -1516,7 +1550,7 @@ $('#p-save').onclick = async () => {
 };
 
 // ------------------------------------------------------------------ навигация
-const VIEWS = ['convert', 'streams', 'detect', 'settings', 'guide'];
+const VIEWS = ['convert', 'streams', 'detect', 'attack', 'settings', 'guide'];
 
 function switchView(name, updateHash = true) {
   if (!VIEWS.includes(name)) name = 'convert';
@@ -1532,9 +1566,77 @@ function switchView(name, updateHash = true) {
   if (name === 'streams' && !streamsState.items.length) loadStreamsTable();
   if (name === 'streams' && streamsState.items.length) renderStreamsTable();
   if (name === 'detect') loadDetections(state.dets.page || 1);
+  if (name === 'attack') loadAttack();
   if (name === 'settings') loadSettings();
 }
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+// ------------------------------------------------------------------ покрытие ATT&CK
+const atk = { data: null, only: false, primary: false, sel: null };
+
+async function loadAttack() {
+  $('#atk-body').innerHTML = '<div class="empty">Загружаю…</div>';
+  try {
+    atk.data = await api('/api/attack/coverage');
+    renderAttack();
+  } catch (e) {
+    $('#atk-body').innerHTML = `<div class="warn error">${esc(e.message)}</div>`;
+  }
+}
+
+function atkDefs(list) { return atk.primary ? list.filter(x => x.primary) : list; }
+function atkClass(n) { return n >= 4 ? 'c3' : n >= 2 ? 'c2' : n >= 1 ? 'c1' : ''; }
+
+function renderAttack() {
+  const d = atk.data;
+  if (!d) return;
+  const seen = new Set();
+  const cols = d.tactics.map(tc => {
+    let covered = 0;
+    const cells = tc.items.map(it => {
+      const own = atkDefs(it.defs);
+      const subs = it.subs.map(s => ({ ...s, defs: atkDefs(s.defs) })).filter(s => s.defs.length);
+      const names = new Set(own.map(x => x.title));
+      subs.forEach(s => s.defs.forEach(x => names.add(x.title)));
+      const n = names.size;
+      if (n) { covered++; seen.add(it.id); subs.forEach(s => seen.add(s.id)); }
+      const key = tc.key + it.id;
+      const cls = 'atk-t' + (n ? ' c ' + atkClass(n) : '') + (atk.only && !n ? ' hid' : '') + (atk.sel === key ? ' sel' : '');
+      const sub = subs.length ? `<span class="atk-subs">${subs.map(s => '.' + esc(s.id.slice(6))).join(' ')}</span>` : '';
+      return `<button type="button" class="${cls}" ${n ? `data-key="${esc(key)}" data-tc="${esc(tc.key)}" data-id="${esc(it.id)}" title="${n}"` : 'tabindex="-1"'}>` +
+        `<small>${esc(it.id)}</small>${esc(it.name)}${sub}</button>`;
+    }).join('');
+    return `<div class="atk-col"><div class="atk-ch"><b>${esc(tc.name)}</b><span>${esc(tc.id)} · ${covered} / ${tc.items.length}</span></div>${cells}</div>`;
+  }).join('');
+  $('#atk-body').innerHTML =
+    `<div class="atk-scroll"><div class="atk-matrix">${cols}</div></div>`;
+  const t = d.totals;
+  $('#atk-stats').textContent = `${t.mapped} из ${t.definitions} с привязкой · техник: ${t.techniques}`;
+  document.querySelectorAll('#atk-body .atk-t.c').forEach(b => b.onclick = () => {
+    atk.sel = b.dataset.key;
+    showAttackDetail(b.dataset.tc, b.dataset.id);
+    renderAttack();
+  });
+  const um = d.unmapped || [];
+  $('#atk-unmapped').innerHTML = um.length
+    ? `<details style="margin-top:12px"><summary>Без привязки к технике: ${um.length}</summary><ul>${um.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : '';
+}
+
+function showAttackDetail(tcKey, id) {
+  const tc = atk.data.tactics.find(t => t.key === tcKey);
+  const it = tc && tc.items.find(i => i.id === id);
+  if (!it) return;
+  const block = (tid, name, list) => list.length
+    ? `<h3>${esc(tid)} ${esc(name)}</h3><ul>${list.map(x =>
+        `<li>${esc(x.title)}${x.primary ? '' : ' <span class="pill">доп. техника</span>'}</li>`).join('')}</ul>` : '';
+  let html = block(it.id, it.name, atkDefs(it.defs));
+  it.subs.forEach(s => { html += block(s.id, s.name, atkDefs(s.defs)); });
+  $('#atk-detail').innerHTML = html;
+}
+
+$('#atk-only').onchange = e => { atk.only = e.target.checked; renderAttack(); };
+$('#atk-primary').onchange = e => { atk.primary = e.target.checked; renderAttack(); };
+$('#atk-reload').onclick = () => loadAttack();
 
 // ------------------------------------------------------------------ руководство
 
@@ -1951,6 +2053,7 @@ document.addEventListener('langchange', () => {
   });
   if (active === 'streams') loadStreamsTable(true);
   else if (active === 'detect') loadDetections((state.dets && state.dets.page) || 1);
+  else if (active === 'attack') loadAttack();
   else if (active === 'settings') loadSettings();
   else if (active === 'convert' && $('#sigma').value.trim()) doConvert();
 });

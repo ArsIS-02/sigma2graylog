@@ -194,6 +194,16 @@ class FakeGraylog:
         self._created.append(payload)
         return {"id": payload["id"], "title": title}
 
+    def attack_definitions(self, max_items: int = 1000) -> list[dict]:
+        demo = {"Windows - PowerShell": (["T1059.001", "T1105"], "T1059.001"),
+                "Windows - Подбор пароля": (["T1110"], "T1110"),
+                "Windows - Очистка журнала": (["T1685.005"], "T1685.005")}
+        out = [{"id": f"demo-{i}", "title": t, "state": "ENABLED", "techniques": ids, "primary": p}
+               for i, (t, (ids, p)) in enumerate(demo.items())]
+        out.append({"id": "demo-x", "title": "Без привязки", "state": "ENABLED",
+                    "techniques": [], "primary": None})
+        return out
+
     def delete_event_definition(self, definition_id: str) -> None:
         self._deleted.add(definition_id)
 
