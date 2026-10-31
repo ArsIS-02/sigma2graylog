@@ -89,6 +89,19 @@ DEMO_DEFINITIONS = [
      'cs-host:/.*\\.(top|xyz)/ AND sc-status:200', "2026-10-22T13:12:00Z"),
 ]
 
+# техники ATT&CK демо-детектов (по русскому названию): (все техники, основная)
+DEMO_ATTACK = {
+    "PowerShell с закодированной командой": (["T1059.001", "T1027.010"], "T1059.001"),
+    "Mimikatz в командной строке": (["T1003.001"], "T1003.001"),
+    "Загрузка через certutil": (["T1105", "T1218"], "T1105"),
+    "Выгрузка NTDS через ntdsutil": (["T1003.003"], "T1003.003"),
+    "Подозрительный rundll32": (["T1218.011"], "T1218.011"),
+    "Изменение sudoers": (["T1548.003"], "T1548.003"),
+    "Обратный шелл через bash": (["T1059.004"], "T1059.004"),
+    "Запуск шелла из нестандартного каталога": (["T1059.004"], "T1059.004"),
+    "Подбор пароля FreeIPA": (["T1110.001"], "T1110.001"),
+}
+
 DEMO_SAMPLES = [
     ("demo-windows", "Process Create: RuleName: - UtcTime: 2026-10-29 07:17:25.450 "
                      "ProcessGuid: {a1b2} Image: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"),
@@ -104,6 +117,7 @@ class FakeGraylog:
     def __init__(self):
         self._created: list[dict] = []
         self._deleted: set[str] = set()
+        self._attack: dict[str, tuple[list[str], str | None]] = {}
 
     # --- служебное ---------------------------------------------------------
     def close(self):  # noqa: D401 - интерфейс клиента
@@ -192,17 +206,28 @@ class FakeGraylog:
                                            (stream_ids or ["demo-windows"])[0],
                                            query, None)
         self._created.append(payload)
+        if attack:
+            ids = [t for t in (attack.get("techniques") or []) if isinstance(t, str)]
+            self._attack[payload["id"]] = (ids, ids[0] if ids else None)
         return {"id": payload["id"], "title": title}
 
     def attack_definitions(self, max_items: int = 1000) -> list[dict]:
-        demo = {"Windows - PowerShell": (["T1059.001", "T1105"], "T1059.001"),
-                "Windows - Подбор пароля": (["T1110"], "T1110"),
-                "Windows - Очистка журнала": (["T1685.005"], "T1685.005")}
-        out = [{"id": f"demo-{i}", "title": t, "state": "ENABLED", "techniques": ids, "primary": p}
-               for i, (t, (ids, p)) in enumerate(demo.items())]
-        out.append({"id": "demo-x", "title": "Без привязки", "state": "ENABLED",
-                    "techniques": [], "primary": None})
-        return out
+        out = []
+        for row in DEMO_DEFINITIONS:
+            ru = row[0][0] if isinstance(row[0], tuple) else row[0]
+            payload = self._definition_payload(*row)
+            if payload["id"] in self._deleted:
+                continue
+            ids, primary = DEMO_ATTACK.get(ru, ([], None))
+            out.append({"id": payload["id"], "title": payload["title"], "state": "ENABLED",
+                        "techniques": ids, "primary": primary})
+        for item in self._created:
+            if item["id"] in self._deleted:
+                continue
+            ids, primary = self._attack.get(item["id"], ([], None))
+            out.append({"id": item["id"], "title": item["title"], "state": "ENABLED",
+                        "techniques": ids, "primary": primary})
+        return out[:max_items]
 
     def delete_event_definition(self, definition_id: str) -> None:
         self._deleted.add(definition_id)

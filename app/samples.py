@@ -31,6 +31,10 @@ detection:
     condition: selection and not filter_main_generic
 falsepositives:
     - Легитимные скрипты администрирования
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.t1027.010
 level: high"""
     },
     {
@@ -52,6 +56,9 @@ detection:
     condition: selection
 falsepositives:
     - Тестирование пентеста
+tags:
+    - attack.credential-access
+    - attack.t1003.001
 level: critical"""
     },
     {
@@ -73,6 +80,9 @@ detection:
     condition: all of selection*
 falsepositives:
     - Корпоративные скрипты обновления
+tags:
+    - attack.command-and-control
+    - attack.t1105
 level: medium"""
     },
     {
@@ -94,6 +104,9 @@ detection:
     condition: selection
 falsepositives:
     - Установщики приложений
+tags:
+    - attack.stealth
+    - attack.t1218.011
 level: medium"""
     },
     {
@@ -112,6 +125,9 @@ detection:
     condition: selection
 falsepositives:
     - Обслуживание контроллера домена
+tags:
+    - attack.credential-access
+    - attack.t1003.003
 level: critical"""
     },
     {
@@ -132,6 +148,9 @@ detection:
     condition: selection
 falsepositives:
     - Административные скрипты
+tags:
+    - attack.persistence
+    - attack.t1053.005
 level: medium"""
     },
     {
@@ -153,6 +172,9 @@ detection:
     condition: selection
 falsepositives:
     - Скрипты резервного копирования
+tags:
+    - attack.execution
+    - attack.t1059.004
 level: critical"""
     },
     {
@@ -172,6 +194,9 @@ detection:
     condition: selection
 falsepositives:
     - Управление конфигурацией (Ansible/puppet)
+tags:
+    - attack.privilege-escalation
+    - attack.t1548.003
 level: high"""
     },
     {
@@ -192,6 +217,9 @@ detection:
     condition: selection
 falsepositives:
     - Легитимные сервисы
+tags:
+    - attack.execution
+    - attack.t1059.004
 level: medium"""
     },
     {
@@ -210,6 +238,9 @@ detection:
     condition: selection
 falsepositives:
     - Антивирусы и EDR
+tags:
+    - attack.credential-access
+    - attack.t1003.001
 level: high"""
     },
     {
@@ -231,6 +262,9 @@ detection:
     condition: selection and not filter_system
 falsepositives:
     - Скрипты инвентаризации
+tags:
+    - attack.discovery
+    - attack.t1033
 level: low"""
     },
     {
@@ -251,6 +285,9 @@ detection:
     condition: selection
 falsepositives:
     - Средства управления конфигурацией
+tags:
+    - attack.execution
+    - attack.t1047
 level: medium"""
     },
 ]

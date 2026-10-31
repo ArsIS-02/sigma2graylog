@@ -59,6 +59,12 @@ requested language), the built-in guide with its illustrations, and demo-mode sa
 
 ![Streams](docs/screenshots/en/02-streams.png)
 
+### MITRE ATT&CK coverage
+
+The **ATT&CK** tab shows a matrix of tactics and techniques covered by Graylog alerts; the layer can be exported for ATT&CK Navigator. See [docs/ATTACK.md](docs/ATTACK.md).
+
+![ATT&CK coverage](docs/screenshots/en/08-attack.png)
+
 ## Quick start (demo, no Graylog needed)
 
 ```bash
