@@ -758,6 +758,7 @@ function ruleCard(r, streamId) {
       <span>logsource: ${esc(r.product || '?')}${r.category ? ' / ' + esc(r.category) : ''}</span>
       ${r.stream ? `<span class="pill ok">стрим: ${esc(r.stream.title)}${r.stream.product ? ' · ' + esc(r.stream.product) : ''}</span>` : ''}
       ${r.rule_id ? `<span>id: ${esc(r.rule_id)}</span>` : ''}
+      ${r.aggregation ? `<span class="pill ok"><span>агрегация</span>: ${esc(aggText(r.aggregation))}</span>` : ''}
       ${r.attack ? `<span class="pill ok" title="${esc((r.attack.items || []).map(i => i.id + ' ' + (i.name || '')).join('\n'))}">ATT&amp;CK: ${esc(r.attack.technique || r.attack.tactic)}${r.attack.technique && r.attack.tactic ? ' · ' + esc(r.attack.tactic) : ''}</span>` : ''}
     </div>`;
   (r.warnings || []).forEach(w => {
@@ -950,6 +951,7 @@ function bindResultHandlers(data) {
           priority: priorityOf(r.level),
           stream_id: (r.stream || {}).id || ($('#stream').value || null),
           attack: r.attack ? { tactics: r.attack.tactics, techniques: r.attack.techniques } : null,
+          aggregation: r.aggregation || null,
         }));
       if (!items.length) { alert(T('Ничего не выбрано')); return; }
       if (!confirm(`Создать в Graylog ${items.length} детект(ов)?\n\n` +
@@ -1080,11 +1082,20 @@ async function probeRule(index) {
 }
 
 let dialogAttack = null;
+let dialogAggregation = null;
+
+// «count() >= 5 · 600 с · по image» — одинаково читается на обоих языках
+function aggText(a) {
+  const fn = a.type === 'value_count' ? `card(${a.value_field})` : 'count()';
+  const by = (a.group_by || []).length ? ` · by ${a.group_by.join(', ')}` : '';
+  return `${fn} ${a.operator} ${a.threshold} · ${a.timespan_seconds}s${by}`;
+}
 
 function openDialog(index) {
   const rule = state.result.rules.find(r => r.index === index);
   if (!rule || !rule.queries.length) return;
   dialogAttack = rule.attack ? { tactics: rule.attack.tactics, techniques: rule.attack.techniques } : null;
+  dialogAggregation = rule.aggregation || null;
   $('#d-title').value = rule.title;
   $('#d-desc').value = `Sigma → Graylog. logsource: ${rule.product || '?'}${rule.category ? '/' + rule.category : ''}`;
   $('#d-prio').value = rule.level === 'critical' ? 1 : rule.level === 'high' ? 2 : 3;
@@ -1113,6 +1124,7 @@ $('#d-create').onclick = async () => {
         query: $('#d-query').value,
         stream_id: $('#stream').value || null,
         attack: dialogAttack,
+        aggregation: dialogAggregation,
         confirm: true,
       }),
     });

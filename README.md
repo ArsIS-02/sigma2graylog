@@ -42,6 +42,10 @@
 
 ![Стримы](docs/screenshots/02-streams.png)
 
+### Корреляции и пороги
+
+Корреляционные правила Sigma (`event_count`, `value_count`) превращаются в определение события Graylog с группировкой и порогом, например «10 неудачных входов с одного адреса за 5 минут». Подробнее — [docs/CORRELATION.md](docs/CORRELATION.md).
+
 ### Покрытие MITRE ATT&CK
 
 Вкладка **«ATT&CK»** показывает матрицу тактик и техник, покрытых алертами Graylog; слой можно выгрузить для ATT&CK Navigator. Подробнее — [docs/ATTACK.md](docs/ATTACK.md).

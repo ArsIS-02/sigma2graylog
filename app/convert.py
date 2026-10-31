@@ -6,6 +6,7 @@ from dataclasses import dataclass, field as dc_field
 
 from sigma.backends.elasticsearch import LuceneBackend
 from sigma.collection import SigmaCollection
+from sigma.correlations import SigmaCorrelationRule, SigmaCorrelationType
 from sigma.exceptions import SigmaError
 from sigma.processing.pipeline import ProcessingItem, ProcessingPipeline
 from sigma.processing.transformations import FieldMappingTransformation
@@ -48,6 +49,9 @@ def convert_rule(rule, mapping: dict[str, str], case_insensitive: bool = False) 
         [ProcessingItem(FieldMappingTransformation(dict(mapping)))]
     )
     backend = LuceneBackend(processing_pipeline=pipeline)
+    # pySigma не выдаёт запрос для правила, на которое ссылается корреляция (generate: false);
+    # нам запрос нужен всё равно — он идёт в основу агрегации
+    rule._output = True
     try:
         queries = backend.convert(SigmaCollection([rule]))
     except SigmaError as exc:
@@ -194,6 +198,94 @@ class ConvertedRule:
     stream: dict | None = None
     warnings: list[dict] = dc_field(default_factory=list)
     attack: dict | None = None
+    aggregation: dict | None = None
+
+
+_OPS = {"GTE": ">=", "GT": ">", "LTE": "<=", "LT": "<", "EQ": "==", "NEQ": "!="}
+_SUPPORTED_CORR = {SigmaCorrelationType.EVENT_COUNT, SigmaCorrelationType.VALUE_COUNT}
+
+
+def _ref_keys(rule) -> set[str]:
+    keys = {str(getattr(rule, "id", "") or ""), str(getattr(rule, "name", "") or ""),
+            str(getattr(rule, "title", "") or "")}
+    return {k for k in keys if k}
+
+
+def _safe_attack(rule):
+    try:
+        return attack_mod.for_rule(rule)
+    except Exception:  # noqa: BLE001 - теги необязательны, не ломаем конвертацию
+        return None
+
+
+def _convert_correlation(rule, idx: int, done: list[tuple[set[str], ConvertedRule]],
+                         mapping_for, overrides: dict, lang: str) -> ConvertedRule:
+    """Корреляционное правило Sigma (event_count / value_count) -> запрос + агрегация Graylog."""
+    refs = [r.reference for r in (rule.rules or [])]
+    bases = [cr for ref in refs for keys, cr in done if ref in keys]
+    title = getattr(rule, "title", "") or f"correlation-{idx}"
+    warnings: list[dict] = []
+    queries: list[str] = []
+    aggregation = None
+    product = next((b.product for b in bases if b.product), None)
+
+    def fail(code: str, **kw):
+        warnings.append({"level": "error", "code": code, "message": tr(lang, code, **kw)})
+
+    ctype = rule.type
+    if ctype not in _SUPPORTED_CORR:
+        fail("corr_unsupported", type=ctype.name.lower())
+    elif not bases or len(bases) < len(set(refs)):
+        fail("corr_missing_rules", rules=", ".join(refs) or "—")
+    elif any(not b.queries for b in bases):
+        fail("corr_base_failed")
+    else:
+        sigma_group = list(rule.group_by or [])
+        value_sigma = None
+        cond = rule.condition
+        fieldref = getattr(cond, "fieldref", None)
+        if ctype == SigmaCorrelationType.VALUE_COUNT:
+            value_sigma = fieldref[0] if isinstance(fieldref, list) else fieldref
+        need = sorted(set(sigma_group + ([value_sigma] if value_sigma else [])))
+        mapping = mapping_for(product, need, overrides) if need else {}
+        mapping.pop("__meta__", None)
+        missing = [f for f in need if not (mapping.get(f) or {}).get("graylog_field")]
+        if missing:
+            fail("unknown_fields", fields=", ".join(missing))
+        else:
+            gl = lambda f: mapping[f]["graylog_field"]  # noqa: E731
+            queries = [" OR ".join(f"({q})" for b in bases for q in b.queries[:1])]
+            aggregation = {
+                "type": ctype.name.lower(),
+                "operator": _OPS[cond.op.name],
+                "threshold": cond.count,
+                "timespan_seconds": rule.timespan.seconds,
+                "group_by": [gl(f) for f in sigma_group],
+                "value_field": gl(value_sigma) if value_sigma else None,
+                "sigma_group_by": sigma_group,
+            }
+            if getattr(rule, "aliases", None) and getattr(rule.aliases, "aliases", None):
+                warnings.append({"level": "warn", "code": "corr_aliases",
+                                 "message": tr(lang, "corr_aliases")})
+            if any(len(b.queries) > 1 for b in bases):
+                warnings.append({"level": "warn", "code": "corr_multi_query",
+                                 "message": tr(lang, "corr_multi_query")})
+            if not sigma_group:
+                warnings.append({"level": "info", "code": "corr_no_group",
+                                 "message": tr(lang, "corr_no_group")})
+    return ConvertedRule(
+        index=idx, title=title,
+        rule_id=str(rule.id) if getattr(rule, "id", None) else None,
+        level=str(rule.level) if getattr(rule, "level", None) else None,
+        product=product,
+        category=next((b.category for b in bases if b.category), None),
+        queries=queries,
+        fields=sorted({f for b in bases for f in b.fields}),
+        stream=next((b.stream for b in bases if b.stream), None),
+        warnings=warnings,
+        attack=_safe_attack(rule) or next((b.attack for b in bases if b.attack), None),
+        aggregation=aggregation,
+    )
 
 
 def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = None,
@@ -208,12 +300,16 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
     rules_out: list[ConvertedRule] = []
     all_fields: dict[str, dict] = {}
 
+    detection_rules = [r for r in collection.rules if not isinstance(r, SigmaCorrelationRule)]
+    correlation_rules = [r for r in collection.rules if isinstance(r, SigmaCorrelationRule)]
     truncated_rules = len(collection.rules) > max_rules
-    for idx, rule in enumerate(collection.rules[:max_rules]):
+    done: list[tuple[set[str], ConvertedRule]] = []
+    for idx, rule in enumerate(detection_rules[:max_rules]):
         fields = sorted(rule_fields(rule))
         # продукт: из правила -> из фильтра источника -> из полей правила
         product = product_of(rule) or (default_product or None) or infer_product(fields)
         product_source = "rule" if product_of(rule) else ("filter" if default_product else "inferred")
+        used_by_correlation = not getattr(rule, "_output", True)
         mapping = mapping_for(product, fields, overrides or {})
         meta = mapping.pop("__meta__", {})
         enabled = {
@@ -237,6 +333,9 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
             warnings.append({"level": "info", "code": "product_from_hint",
                              "message": tr(lang, "product_from_hint", product=product,
                                            source=product_source)})
+        if used_by_correlation:
+            warnings.append({"level": "info", "code": "corr_base_rule",
+                             "message": tr(lang, "corr_base_rule")})
         if err:
             warnings.insert(0, {"level": "error", "code": "backend_error",
                                 "message": tr(lang, "convert_error", error=err)})
@@ -253,6 +352,11 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
             warnings=warnings,
             attack=attack_mod.for_rule(rule),
         ))
+        done.append((_ref_keys(rule), rules_out[-1]))
+
+    for rule in correlation_rules[:max(0, max_rules - len(rules_out))]:
+        rules_out.append(_convert_correlation(rule, len(rules_out), done, mapping_for,
+                                              overrides or {}, lang))
 
     return {
         "rules": [
@@ -268,6 +372,7 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
                 "stream": r.stream,
                 "warnings": r.warnings,
                 "attack": r.attack,
+                "aggregation": r.aggregation,
             }
             for r in rules_out
         ],

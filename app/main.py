@@ -298,6 +298,8 @@ class BulkItem(BaseModel):
     stream_id: str | None = None
     # {"tactics": [...], "techniques": [...]} из тегов attack.* правила (см. app/attack.py)
     attack: dict | None = None
+    # порог и группировка из корреляционного правила Sigma (см. app/convert.py)
+    aggregation: dict | None = None
 
 
 class BulkRequest(BaseModel):
@@ -326,6 +328,7 @@ class EventDefinitionRequest(BaseModel):
     stream_id: str | None = None
     confirm: bool = False
     attack: dict | None = None
+    aggregation: dict | None = None
 
 
 @app.get("/api/status", dependencies=[Depends(current_user)])
@@ -519,6 +522,7 @@ def event_definition(req: EventDefinitionRequest):
             priority=req.priority,
             stream_ids=[req.stream_id] if req.stream_id else [],
             attack=req.attack,
+            aggregation=req.aggregation,
         )
     except GraylogError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -973,6 +977,7 @@ def bulk_create(req: BulkRequest):
                     priority=item.priority,
                     stream_ids=[item.stream_id] if item.stream_id else [],
                     attack=item.attack,
+                    aggregation=item.aggregation,
                 )
                 row.update({"ok": True, "status": "created", "id": created.get("id")})
             except GraylogError as exc:

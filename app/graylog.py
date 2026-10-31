@@ -12,6 +12,39 @@ class GraylogError(RuntimeError):
     pass
 
 
+_AGG_OPS = {">=", ">", "<=", "<", "==", "!="}
+
+
+def aggregation_config(aggregation: dict | None) -> dict | None:
+    """Описание агрегации из конвертера -> куски config события Graylog (aggregation-v1)."""
+    if not aggregation:
+        return None
+    op = aggregation.get("operator") or ">="
+    if op not in _AGG_OPS:
+        raise GraylogError(f"Неподдерживаемый оператор порога: {op}")
+    if aggregation.get("type") == "value_count":
+        field = aggregation.get("value_field")
+        if not field:
+            raise GraylogError("Для value_count нужно поле, по которому считаются значения")
+        series = {"id": f"card({field})", "type": "card", "field": field}
+    else:
+        series = {"id": "count()", "type": "count", "field": None}
+    span_ms = max(1, int(aggregation.get("timespan_seconds") or 60)) * 1000
+    threshold = aggregation.get("threshold") or 0
+    return {
+        "group_by": list(aggregation.get("group_by") or []),
+        "series": [series],
+        "conditions": {"expression": {
+            "expr": op,
+            "left": {"expr": "number-ref", "ref": series["id"]},
+            "right": {"expr": "number", "value": threshold},
+        }},
+        "search_within_ms": span_ms,
+        # проверка раз в минуту, но не реже, чем окно
+        "execute_every_ms": min(60_000, span_ms),
+    }
+
+
 class Graylog:
     def __init__(self, base_url: str, user: str | None = None, password: str | None = None,
                  token: str | None = None, timeout: float = 20.0):
@@ -200,8 +233,16 @@ class Graylog:
                                 priority: int = 2, stream_ids: list[str] | None = None,
                                 search_within_ms: int = 300_000,
                                 execute_every_ms: int = 60_000,
-                                attack: dict | None = None) -> dict:
-        """Создаёт Event Definition (Graylog 7.x: тело обязано быть обёрнуто в entity)."""
+                                attack: dict | None = None,
+                                aggregation: dict | None = None) -> dict:
+        """Создаёт Event Definition (Graylog 7.x: тело обязано быть обёрнуто в entity).
+
+        aggregation (из корреляционного правила Sigma): группировка, функция и порог.
+        """
+        agg = aggregation_config(aggregation)
+        if agg:
+            search_within_ms = agg["search_within_ms"]
+            execute_every_ms = agg["execute_every_ms"]
         config = {
             "type": "aggregation-v1",
             "query": query,
@@ -209,10 +250,10 @@ class Graylog:
             "filters": [],
             "streams": stream_ids or [],
             "stream_categories": [],
-            "group_by": [],
-            # серия не задана — детект срабатывает на каждое совпадение, без агрегации
-            "series": [],
-            "conditions": {"expression": None},
+            # без агрегации серия не задана — детект срабатывает на каждое совпадение
+            "group_by": agg["group_by"] if agg else [],
+            "series": agg["series"] if agg else [],
+            "conditions": agg["conditions"] if agg else {"expression": None},
             "search_within_ms": int(search_within_ms),
             "execute_every_ms": int(execute_every_ms),
             "use_cron_scheduling": False,
@@ -228,7 +269,7 @@ class Graylog:
             "config": config,
             # поля mitre_tactic / mitre_technique / mitre_techniques из тегов attack.* правила
             "field_spec": attack_field_spec(attack),
-            "key_spec": [],
+            "key_spec": list(agg["group_by"]) if agg else [],
             "notification_settings": {"grace_period_ms": 0, "backlog_size": 5},
             "notifications": [],
             "storage": [],

@@ -5,6 +5,34 @@
 from __future__ import annotations
 
 MESSAGES: dict[str, dict[str, str]] = {
+    "corr_unsupported": {
+        "ru": "Тип корреляции «{type}» не поддерживается: сейчас переводятся event_count и value_count",
+        "en": "Correlation type \"{type}\" is not supported: only event_count and value_count are converted",
+    },
+    "corr_missing_rules": {
+        "ru": "Корреляция ссылается на правила, которых нет во входных данных: {rules}. Добавьте их в тот же файл",
+        "en": "The correlation refers to rules that are not in the input: {rules}. Add them to the same file",
+    },
+    "corr_base_failed": {
+        "ru": "Одно из правил, на которые ссылается корреляция, не удалось конвертировать — см. его предупреждения",
+        "en": "One of the rules the correlation refers to failed to convert — see its warnings",
+    },
+    "corr_base_rule": {
+        "ru": "Это правило входит в корреляцию: по одному оно сработает на каждое событие, обычно создают только агрегирующий детект",
+        "en": "This rule is part of a correlation: on its own it fires on every event, normally only the aggregating detection is created",
+    },
+    "corr_aliases": {
+        "ru": "Псевдонимы полей (aliases) в корреляции не учитываются: группировка идёт по именам из group-by",
+        "en": "Field aliases in the correlation are ignored: grouping uses the names from group-by",
+    },
+    "corr_multi_query": {
+        "ru": "У одного из исходных правил несколько запросов — в агрегацию взят первый",
+        "en": "One of the source rules produced several queries — the first one is used in the aggregation",
+    },
+    "corr_no_group": {
+        "ru": "group-by не задан: порог считается по всем событиям, без разбивки по полю",
+        "en": "No group-by: the threshold is counted over all events, without a per-field split",
+    },
     "unknown_fields": {
         "ru": "Поля отсутствуют в индексах Graylog: {fields}",
         "en": "Fields missing in Graylog indexes: {fields}",

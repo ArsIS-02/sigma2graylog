@@ -59,6 +59,10 @@ requested language), the built-in guide with its illustrations, and demo-mode sa
 
 ![Streams](docs/screenshots/en/02-streams.png)
 
+### Correlations and thresholds
+
+Sigma correlation rules (`event_count`, `value_count`) become a Graylog event definition with grouping and a threshold, e.g. "10 failed logons from one address within 5 minutes". See [docs/CORRELATION.md](docs/CORRELATION.md).
+
 ### MITRE ATT&CK coverage
 
 The **ATT&CK** tab shows a matrix of tactics and techniques covered by Graylog alerts; the layer can be exported for ATT&CK Navigator. See [docs/ATTACK.md](docs/ATTACK.md).

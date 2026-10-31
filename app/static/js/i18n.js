@@ -65,6 +65,7 @@
 
     // --- детекты ---
     'Детекты в Graylog': 'Detections in Graylog',
+    'агрегация': 'aggregation',
     'Покрытие ATT&CK': 'ATT&CK coverage',
     'Покрытие ATT&CK алертами Graylog': 'ATT&CK coverage by Graylog alerts',
     'Только покрытые техники': 'Covered techniques only',

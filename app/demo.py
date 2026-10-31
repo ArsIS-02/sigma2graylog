@@ -19,7 +19,7 @@ _FIELDS_WINDOWS = [
     "winlogbeat_winlog_event_data_Image", "winlogbeat_winlog_event_data_ParentImage",
     "winlogbeat_winlog_event_data_CommandLine", "winlogbeat_winlog_event_data_User",
     "winlogbeat_winlog_event_data_TargetFilename", "winlogbeat_winlog_event_data_Hashes",
-    "winlogbeat_winlog_event_data_GrantedAccess", "winlogbeat_winlog_event_data_TargetImage",
+    "winlogbeat_winlog_event_data_GrantedAccess", "winlogbeat_winlog_event_data_TargetImage", "winlogbeat_winlog_event_data_IpAddress",
     "winlogbeat_host_hostname", "winlogbeat_host_os_platform", "winlogbeat_event_code",
     "winlogbeat_agent_name", "winlogbeat_agent_id", "winlogbeat_event_created",
     "winlogbeat_winlog_channel", "winlogbeat_winlog_provider_name",
@@ -201,7 +201,8 @@ class FakeGraylog:
                                 priority: int = 2, stream_ids: list[str] | None = None,
                                 search_within_ms: int = 300_000,
                                 execute_every_ms: int = 60_000,
-                                attack: dict | None = None) -> dict:
+                                attack: dict | None = None,
+                                aggregation: dict | None = None) -> dict:
         payload = self._definition_payload(title, priority,
                                            (stream_ids or ["demo-windows"])[0],
                                            query, None)

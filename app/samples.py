@@ -604,3 +604,39 @@ def _title(sample: dict) -> str:
         if line.startswith("title:"):
             return line.split(":", 1)[1].strip()
     return "untitled"
+
+
+SAMPLES += [
+    {"source": "Sigma correlation / windows/security", "yaml": r"""title: Failed Logon
+id: 5c1c9d5e-3a8e-4a5b-8f7e-0b1d6c2a9e11
+name: failed_logon
+status: test
+description: Неудачная попытка входа в Windows
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4625
+    condition: selection
+level: low
+---
+title: Windows Logon Brute Force
+id: 9a7f2b64-6d0e-4c53-b1a8-3e5f7d2c8b90
+status: test
+description: 10 неудачных входов с одного адреса за 5 минут
+correlation:
+    type: event_count
+    rules:
+        - failed_logon
+    group-by:
+        - IpAddress
+    timespan: 5m
+    condition:
+        gte: 10
+tags:
+    - attack.credential-access
+    - attack.t1110
+level: high
+"""},
+]
