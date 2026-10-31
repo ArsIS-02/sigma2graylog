@@ -4,6 +4,7 @@ from __future__ import annotations
 import httpx
 
 from .attack import field_spec as attack_field_spec
+from .attack import with_description as attack_description
 
 
 class GraylogError(RuntimeError):
@@ -220,7 +221,7 @@ class Graylog:
         }
         entity = {
             "title": title,
-            "description": description,
+            "description": attack_description(description, attack),
             "priority": int(priority),
             "alert": False,
             "config": config,

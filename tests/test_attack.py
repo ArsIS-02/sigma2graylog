@@ -53,3 +53,26 @@ def test_field_spec_shape_matches_graylog_templates():
 def test_rule_without_attack_tags():
     rule = type("R", (), {"tags": ["cve.2020-1"]})()
     assert attack.for_rule(rule) is None
+
+
+def test_description_line_lists_all_tactics_and_techniques():
+    line = attack.description_line({"tactics": [], "techniques": ["T1098.004"]})
+    assert line == ("MITRE ATT&CK. Тактики: Persistence, Privilege Escalation. "
+                    "Техники: T1098.004 SSH Authorized Keys.")
+    multi = attack.description_line({"tactics": [], "techniques": ["T1059.001", "T1105"]})
+    assert multi.startswith("MITRE ATT&CK. Тактики: Execution")
+    assert "Техники: T1059.001 PowerShell; T1105 Ingress Tool Transfer." in multi
+
+
+def test_description_line_without_techniques_uses_rule_tactics():
+    line = attack.description_line({"tactics": ["credential-access"], "techniques": []})
+    assert line == "MITRE ATT&CK. Тактики: Credential Access."
+
+
+def test_with_description_is_idempotent():
+    a = {"tactics": [], "techniques": ["T1110"]}
+    once = attack.with_description("Подбор паролей.", a)
+    assert once.startswith("Подбор паролей.\nMITRE ATT&CK.")
+    assert attack.with_description(once, a) == once
+    assert attack.with_description("Текст", None) == "Текст"
+    assert attack.with_description("", a).startswith("MITRE ATT&CK.")

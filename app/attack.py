@@ -111,6 +111,45 @@ def describe(attack: dict | None) -> dict | None:
     }
 
 
+def description_line(attack: dict | None) -> str:
+    """Строка для описания определения: «MITRE ATT&CK. Тактики: ... Техники: ...».
+
+    Тактики: основная первой, затем остальные тактики всех техник правила (без повторов),
+    потом тактики из тегов правила. Если техник нет, только тактики из тегов.
+    """
+    d = describe(attack)
+    if not d:
+        return ""
+    ref = reference()
+    order: list[str] = []
+    main = next((k for k, v in ref["tactics"].items() if v["name"] == d["tactic"]), None)
+    if main:
+        order.append(main)
+    for item in d["items"]:
+        for k in (ref["techniques"].get(item["id"]) or {}).get("tactics") or []:
+            if k not in order:
+                order.append(k)
+    for k in (attack.get("tactics") or []):
+        if k in ref["tactics"] and k not in order:
+            order.append(k)
+    parts = ["MITRE ATT&CK."]
+    if order:
+        parts.append("Тактики: " + ", ".join(ref["tactics"][k]["name"] for k in order) + ".")
+    if d["items"]:
+        parts.append("Техники: " + "; ".join(
+            i["id"] + (" " + i["name"] if i["name"] else "") for i in d["items"]) + ".")
+    return " ".join(parts)
+
+
+def with_description(description: str, attack: dict | None) -> str:
+    """Описание с добавленной строкой ATT&CK; повторный вызов строку не дублирует."""
+    line = description_line(attack)
+    base = re.sub(r"\s*MITRE ATT&CK\.[\s\S]*$", "", description or "").rstrip()
+    if not line:
+        return description or ""
+    return (base + "\n" + line) if base else line
+
+
 def field_spec(attack: dict | None) -> dict:
     """field_spec для определения события Graylog (template-v1 со статическим текстом)."""
     d = describe(attack)
