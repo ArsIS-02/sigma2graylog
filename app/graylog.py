@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import httpx
 
+from .attack import field_spec as attack_field_spec
+
 
 class GraylogError(RuntimeError):
     pass
@@ -195,7 +197,8 @@ class Graylog:
     def create_event_definition(self, *, title: str, query: str, description: str = "",
                                 priority: int = 2, stream_ids: list[str] | None = None,
                                 search_within_ms: int = 300_000,
-                                execute_every_ms: int = 60_000) -> dict:
+                                execute_every_ms: int = 60_000,
+                                attack: dict | None = None) -> dict:
         """Создаёт Event Definition (Graylog 7.x: тело обязано быть обёрнуто в entity)."""
         config = {
             "type": "aggregation-v1",
@@ -221,7 +224,8 @@ class Graylog:
             "priority": int(priority),
             "alert": False,
             "config": config,
-            "field_spec": {},
+            # поля mitre_tactic / mitre_technique / mitre_techniques из тегов attack.* правила
+            "field_spec": attack_field_spec(attack),
             "key_spec": [],
             "notification_settings": {"grace_period_ms": 0, "backlog_size": 5},
             "notifications": [],

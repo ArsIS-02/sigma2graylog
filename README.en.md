@@ -33,6 +33,7 @@ historical data — before you create a detection.
 | **Detections tab** | browse, search, open and delete existing Graylog event definitions |
 | **Batch mode** | table with filters, bulk creation with a dry-run preview and per-item report |
 | **Rule library** | public Sigma sets (SigmaHQ, ThreatHunting Keywords, ...): load a whole set or one product, per-product breakdown |
+| **MITRE ATT&CK** | the rule's `attack.*` tags are written to the detection's events as `mitre_tactic`, `mitre_technique`, `mitre_techniques` (ATT&CK v20 reference, obsolete IDs are replaced) |
 | **Extractor generator** | emits a Graylog pipeline rule for a field missing in your stream |
 | **Settings UI** | Graylog URL, token or password, cache TTL, defaults — secrets encrypted at rest |
 | **Built-in guide** | a "Guide" tab: seven annotated steps with animated pointers |

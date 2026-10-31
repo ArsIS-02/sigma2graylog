@@ -722,6 +722,7 @@ function ruleCard(r, streamId) {
       <span>logsource: ${esc(r.product || '?')}${r.category ? ' / ' + esc(r.category) : ''}</span>
       ${r.stream ? `<span class="pill ok">стрим: ${esc(r.stream.title)}${r.stream.product ? ' · ' + esc(r.stream.product) : ''}</span>` : ''}
       ${r.rule_id ? `<span>id: ${esc(r.rule_id)}</span>` : ''}
+      ${r.attack ? `<span class="pill ok" title="${esc((r.attack.items || []).map(i => i.id + ' ' + (i.name || '')).join('\n'))}">ATT&amp;CK: ${esc(r.attack.technique || r.attack.tactic)}${r.attack.technique && r.attack.tactic ? ' · ' + esc(r.attack.tactic) : ''}</span>` : ''}
     </div>`;
   (r.warnings || []).forEach(w => {
     html += `<div class="warn ${w.level === 'error' ? 'error' : (w.level === 'info' ? 'info' : '')}">${esc(w.message)}</div>`;
@@ -912,6 +913,7 @@ function bindResultHandlers(data) {
           description: `Sigma → Graylog. logsource: ${r.product || '?'}${r.category ? '/' + r.category : ''}`,
           priority: priorityOf(r.level),
           stream_id: (r.stream || {}).id || ($('#stream').value || null),
+          attack: r.attack ? { tactics: r.attack.tactics, techniques: r.attack.techniques } : null,
         }));
       if (!items.length) { alert(T('Ничего не выбрано')); return; }
       if (!confirm(`Создать в Graylog ${items.length} детект(ов)?\n\n` +
@@ -1041,9 +1043,12 @@ async function probeRule(index) {
   }
 }
 
+let dialogAttack = null;
+
 function openDialog(index) {
   const rule = state.result.rules.find(r => r.index === index);
   if (!rule || !rule.queries.length) return;
+  dialogAttack = rule.attack ? { tactics: rule.attack.tactics, techniques: rule.attack.techniques } : null;
   $('#d-title').value = rule.title;
   $('#d-desc').value = `Sigma → Graylog. logsource: ${rule.product || '?'}${rule.category ? '/' + rule.category : ''}`;
   $('#d-prio').value = rule.level === 'critical' ? 1 : rule.level === 'high' ? 2 : 3;
@@ -1071,6 +1076,7 @@ $('#d-create').onclick = async () => {
         priority: +$('#d-prio').value,
         query: $('#d-query').value,
         stream_id: $('#stream').value || null,
+        attack: dialogAttack,
         confirm: true,
       }),
     });

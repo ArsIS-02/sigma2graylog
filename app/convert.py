@@ -11,6 +11,7 @@ from sigma.processing.pipeline import ProcessingItem, ProcessingPipeline
 from sigma.processing.transformations import FieldMappingTransformation
 from sigma.rule import SigmaDetection, SigmaDetectionItem
 
+from . import attack as attack_mod
 from .i18n import tr
 from .lucene_fix import describe_codes, fix_query
 
@@ -192,6 +193,7 @@ class ConvertedRule:
     fields: list[str]
     stream: dict | None = None
     warnings: list[dict] = dc_field(default_factory=list)
+    attack: dict | None = None
 
 
 def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = None,
@@ -249,6 +251,7 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
             fields=fields,
             stream=meta.get("stream"),
             warnings=warnings,
+            attack=attack_mod.for_rule(rule),
         ))
 
     return {
@@ -264,6 +267,7 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
                 "fields": r.fields,
                 "stream": r.stream,
                 "warnings": r.warnings,
+                "attack": r.attack,
             }
             for r in rules_out
         ],

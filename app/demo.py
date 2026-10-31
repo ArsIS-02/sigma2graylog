@@ -186,7 +186,8 @@ class FakeGraylog:
     def create_event_definition(self, *, title: str, query: str, description: str = "",
                                 priority: int = 2, stream_ids: list[str] | None = None,
                                 search_within_ms: int = 300_000,
-                                execute_every_ms: int = 60_000) -> dict:
+                                execute_every_ms: int = 60_000,
+                                attack: dict | None = None) -> dict:
         payload = self._definition_payload(title, priority,
                                            (stream_ids or ["demo-windows"])[0],
                                            query, None)
