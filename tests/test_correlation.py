@@ -135,3 +135,17 @@ def test_aggregation_config_rejects_bad_input():
             continue
         raise AssertionError("ожидалась GraylogError")
     assert aggregation_config(None) is None
+
+
+def test_group_field_is_listed_for_manual_mapping():
+    def no_map(product, fields, overrides):
+        out = _mapping(product, fields, overrides)
+        if fields == ["Image"]:
+            out["Image"] = {"graylog_field": None, "confidence": 0, "candidates": []}
+        return out
+
+    res = converter.convert(_corr(), no_map)
+    corr = res["rules"][-1]
+    assert "Image" in corr["fields"]
+    assert "Image" in res["fields"]  # попадает в таблицу сопоставления, можно выбрать вручную
+    assert "unknown_fields" in _codes(corr)

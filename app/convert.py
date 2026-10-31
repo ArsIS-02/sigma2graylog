@@ -219,7 +219,7 @@ def _safe_attack(rule):
 
 
 def _convert_correlation(rule, idx: int, done: list[tuple[set[str], ConvertedRule]],
-                         mapping_for, overrides: dict, lang: str) -> ConvertedRule:
+                         mapping_for, overrides: dict, lang: str) -> tuple[ConvertedRule, dict]:
     """Корреляционное правило Sigma (event_count / value_count) -> запрос + агрегация Graylog."""
     refs = [r.reference for r in (rule.rules or [])]
     bases = [cr for ref in refs for keys, cr in done if ref in keys]
@@ -227,6 +227,7 @@ def _convert_correlation(rule, idx: int, done: list[tuple[set[str], ConvertedRul
     warnings: list[dict] = []
     queries: list[str] = []
     aggregation = None
+    group_mapping: dict = {}
     product = next((b.product for b in bases if b.product), None)
 
     def fail(code: str, **kw):
@@ -249,6 +250,7 @@ def _convert_correlation(rule, idx: int, done: list[tuple[set[str], ConvertedRul
         need = sorted(set(sigma_group + ([value_sigma] if value_sigma else [])))
         mapping = mapping_for(product, need, overrides) if need else {}
         mapping.pop("__meta__", None)
+        group_mapping = {f: mapping[f] for f in need if f in mapping}
         missing = [f for f in need if not (mapping.get(f) or {}).get("graylog_field")]
         if missing:
             fail("unknown_fields", fields=", ".join(missing))
@@ -280,12 +282,13 @@ def _convert_correlation(rule, idx: int, done: list[tuple[set[str], ConvertedRul
         product=product,
         category=next((b.category for b in bases if b.category), None),
         queries=queries,
-        fields=sorted({f for b in bases for f in b.fields}),
+        # поля группировки тоже показываем в таблице сопоставления, чтобы их можно было выбрать вручную
+        fields=sorted({f for b in bases for f in b.fields} | set(group_mapping)),
         stream=next((b.stream for b in bases if b.stream), None),
         warnings=warnings,
         attack=_safe_attack(rule) or next((b.attack for b in bases if b.attack), None),
         aggregation=aggregation,
-    )
+    ), group_mapping
 
 
 def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = None,
@@ -355,8 +358,11 @@ def convert(sigma_text: str, mapping_for, overrides: dict[str, str] | None = Non
         done.append((_ref_keys(rule), rules_out[-1]))
 
     for rule in correlation_rules[:max(0, max_rules - len(rules_out))]:
-        rules_out.append(_convert_correlation(rule, len(rules_out), done, mapping_for,
-                                              overrides or {}, lang))
+        converted, group_mapping = _convert_correlation(rule, len(rules_out), done, mapping_for,
+                                                        overrides or {}, lang)
+        rules_out.append(converted)
+        for f, m in group_mapping.items():
+            all_fields.setdefault(f, m)
 
     return {
         "rules": [
