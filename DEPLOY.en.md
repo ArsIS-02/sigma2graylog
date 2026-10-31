@@ -201,7 +201,7 @@ Works for rootless and rootful (`sudo podman …`). Note: root and a regular use
 ```bash
 cd ~/sigma2graylog                    # must be a clone: git clone https://github.com/ArsIS-02/sigma2graylog
 git pull
-sudo podman build -t localhost/sigma2graylog:0.81 .     # a new tag for every update
+sudo podman build -t localhost/sigma2graylog:0.81 .     # a new tag for every update; the number from app/version.py is shown next to the logo
 
 # environment of the old container into a protected file (nothing is printed)
 sudo podman inspect sigma2graylog --format '{{range .Config.Env}}{{println .}}{{end}}' \

@@ -200,7 +200,7 @@ podman run -d --name sigma2graylog --security-opt label=disable \
 ```bash
 cd ~/sigma2graylog                    # должен быть клоном: git clone https://github.com/ArsIS-02/sigma2graylog
 git pull
-sudo podman build -t localhost/sigma2graylog:0.81 .     # новый тег на каждое обновление
+sudo podman build -t localhost/sigma2graylog:0.81 .     # новый тег на каждое обновление; номер из app/version.py виден в интерфейсе у логотипа
 
 # переменные окружения старого контейнера — в защищённый файл (на экран не выводятся)
 sudo podman inspect sigma2graylog --format '{{range .Config.Env}}{{println .}}{{end}}' \

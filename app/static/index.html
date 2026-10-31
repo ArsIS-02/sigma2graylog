@@ -61,6 +61,7 @@
   .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;flex:0 0 auto}
   .brand img{display:block;border-radius:8px}
   .brand:hover h1{color:#fff}
+  .brand .ver{font-size:11px;line-height:1;padding:3px 6px;border-radius:9px;border:1px solid var(--line);color:var(--muted);align-self:center;font-variant-numeric:tabular-nums}
   header h1{white-space:nowrap}
   /* браузер подсвечивает автозаполненные поля белым — перекрашиваем под тему */
   input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,
@@ -221,6 +222,7 @@
   <a class="brand" href="/" title="sigma2graylog — на главную">
     <img src="/static/icon-192.png" alt="sigma2graylog" width="30" height="30">
     <h1>sigma<span>2</span>graylog</h1>
+    <span class="ver" title="Версия приложения">v__VERSION__</span>
   </a>
   <nav class="tabs">
     <button data-view="convert" class="active">Конвертер</button>

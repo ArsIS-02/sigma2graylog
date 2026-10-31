@@ -21,6 +21,7 @@ from . import demo as demo_mod
 from . import loader, samples, sources as sources_mod
 from . import mapping as mapping_mod
 from .i18n import lang_of
+from .version import __version__
 from .settings import SettingsStore
 from .auth import (COOKIE_NAME, MIN_PASSWORD_LEN, SESSION_TTL, Sessions,
                    Throttle, UserStore)
@@ -553,7 +554,7 @@ class PasswordRequest(BaseModel):
 def login_page(request: Request):
     if DEMO_MODE or sessions.verify(_cookie(request) or "", users):
         return RedirectResponse("/", status_code=302)
-    return HTMLResponse((STATIC / "login.html").read_text("utf-8"), headers=NO_CACHE)
+    return HTMLResponse(_page("login.html"), headers=NO_CACHE)
 
 
 @app.post("/login")
@@ -1098,14 +1099,19 @@ async def _demo_lang(request: Request, call_next):
     return await call_next(request)
 
 
+def _page(name: str) -> str:
+    """HTML страницы с подставленным номером версии (заглушка __VERSION__)."""
+    return (STATIC / name).read_text("utf-8").replace("__VERSION__", __version__)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     if not DEMO_MODE and not sessions.verify(_cookie(request) or "", users):
         return RedirectResponse("/login", status_code=302)
     # no-store: после обновления контейнера браузер не должен показывать старый интерфейс
-    return HTMLResponse((STATIC / "index.html").read_text("utf-8"), headers=NO_CACHE)
+    return HTMLResponse(_page("index.html"), headers=NO_CACHE)
 
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True}
+    return {"ok": True, "version": __version__}
