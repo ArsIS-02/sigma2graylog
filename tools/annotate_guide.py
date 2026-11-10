@@ -60,7 +60,7 @@ STEPS = {
         "source": "02-streams.png", "crop": (10, 60, 1670, 880),
         "marks": [
             {"label": "1", "probe": (1500, 200, 260, INPUT_BG), "band": (18, 1650)},
-            {"label": "2", "probe": (1200, 620, 700, INPUT_BG), "band": (18, 1650)},
+            {"label": "2", "probe": (1200, 620, 800, INPUT_BG), "band": (18, 1650)},
         ],
     },
     "g7-detect": {
